@@ -24,31 +24,26 @@ class DetectorApp:
         self.cap = None
         self.win_name = "Live Detection Stream"
         
-        # --- FPS Calculation State ---
+        # --- FPS & Timing State ---
         self.last_time = time.time()
-        # Store last 30 frame times to get a smooth average
         self.frame_times = deque(maxlen=30) 
-        self.current_fps = 15.0 # Default fallback
+        self.current_fps = 0.0
         
-        # --- GUI Layout ---
+        # --- Recording Sync State ---
+        self.record_target_fps = 20.0          # We force the FILE to be 20 FPS
+        self.record_time_per_frame = 1.0 / 20.0 
+        self.record_accumulated_time = 0.0     # Tracks how much "real time" has passed
+        
         self.setup_ui()
-        
-        # --- Bind Spacebar Globally ---
         self.root.bind('<space>', self.toggle_patch)
-        
-        # --- Initialize in Background ---
         self.log("Waiting for GUI...")
         self.root.after(500, self.start_initialization_thread)
 
     def setup_ui(self):
-        # Header
         tk.Label(self.root, text="Adversarial Demo", font=("Arial", 16, "bold")).pack(pady=10)
-        
-        # Status
         self.status_lbl = tk.Label(self.root, text="Initializing...", fg="blue")
         self.status_lbl.pack(pady=5)
         
-        # Object Input
         frame_input = tk.Frame(self.root)
         frame_input.pack(pady=5)
         tk.Label(frame_input, text="Add Object:").pack(side=tk.LEFT)
@@ -57,28 +52,17 @@ class DetectorApp:
         self.entry_obj.bind('<Return>', self.add_object)
         tk.Button(frame_input, text="Add", command=self.add_object).pack(side=tk.LEFT)
         
-        # Valid Objects Hint
-        tk.Label(self.root, text="(Try: 'cell phone', 'bottle', 'cup', 'laptop')", 
-                 font=("Arial", 8), fg="gray").pack(pady=0)
-        
-        # Listbox
+        tk.Label(self.root, text="(Try: 'cell phone', 'bottle', 'cup', 'laptop')", font=("Arial", 8), fg="gray").pack(pady=0)
         self.listbox = tk.Listbox(self.root, height=8)
         self.listbox.pack(pady=10, fill=tk.X, padx=20)
-        
-        # Instructions
         tk.Label(self.root, text="Press [SPACE] to toggle Glasses", fg="black", font=("Arial", 10, "bold")).pack(pady=5)
 
-        # Recording Controls
         record_frame = tk.Frame(self.root)
         record_frame.pack(pady=10)
-        
-        self.btn_record = tk.Button(record_frame, text="Start Recording", bg="gray", fg="white", 
-                                    font=("Arial", 10), command=self.toggle_recording)
+        self.btn_record = tk.Button(record_frame, text="Start Recording", bg="gray", fg="white", font=("Arial", 10), command=self.toggle_recording)
         self.btn_record.pack()
 
-        # Stop Button
-        self.btn_stop = tk.Button(self.root, text="EXIT DEMO", bg="#8B0000", fg="white", 
-                                  font=("Arial", 12, "bold"), command=self.stop_demo)
+        self.btn_stop = tk.Button(self.root, text="EXIT DEMO", bg="#8B0000", fg="white", font=("Arial", 12, "bold"), command=self.stop_demo)
         self.btn_stop.pack(pady=20, ipadx=20, ipady=5)
 
     def log(self, msg):
@@ -101,17 +85,24 @@ class DetectorApp:
             os.makedirs("recordings")
             
         filename = f"recordings/demo_{int(time.time())}.mp4"
+        frame_size = (1280, 720) 
         
-        # SMART FPS: Use the actual calculated FPS from the last few seconds
-        # We ensure it's at least 5 to avoid errors if startup was slow
-        record_fps = max(5.0, round(self.current_fps))
-        
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.video_writer = cv2.VideoWriter(filename, fourcc, record_fps, (1280, 720))
-        
+        # Reset the accumulator so we start fresh
+        self.record_accumulated_time = 0.0
+
+        # Try H.264 (avc1) first, fallback to mp4v
+        try:
+            fourcc = cv2.VideoWriter_fourcc(*'avc1')
+            self.video_writer = cv2.VideoWriter(filename, fourcc, self.record_target_fps, frame_size)
+            if not self.video_writer.isOpened(): raise Exception("H.264 failed")
+            self.log(f"Recording (H.264) started...")
+        except Exception:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            self.video_writer = cv2.VideoWriter(filename, fourcc, self.record_target_fps, frame_size)
+            self.log(f"Recording (MP4V) started...")
+
         self.is_recording = True
-        self.btn_record.config(text=f"Stop Rec ({int(record_fps)} FPS)", bg="red")
-        self.log(f"Recording at {int(record_fps)} FPS...")
+        self.btn_record.config(text="Stop Recording", bg="red")
 
     def stop_recording(self):
         self.is_recording = False
@@ -129,15 +120,12 @@ class DetectorApp:
             resolved_name, match_type = self.engine.resolve_object_name(raw_obj)
 
             if match_type == "fail":
-                messagebox.showwarning("Unknown Object", 
-                    f"Could not understand '{raw_obj}'.\nTry standard names like 'bottle', 'cup', 'mouse'.")
+                messagebox.showwarning("Unknown Object", f"Could not understand '{raw_obj}'.")
                 return
             
-            if match_type == "alias":
-                self.log(f"Mapped '{raw_obj}' -> '{resolved_name}'")
+            if match_type == "alias": self.log(f"Mapped '{raw_obj}' -> '{resolved_name}'")
             elif match_type == "fuzzy":
-                if not messagebox.askyesno("Did you mean?", f"Did you mean '{resolved_name}'?"):
-                    return
+                if not messagebox.askyesno("Did you mean?", f"Did you mean '{resolved_name}'?"): return
                 self.log(f"Corrected '{raw_obj}' -> '{resolved_name}'")
 
             if resolved_name not in self.active_objects:
@@ -154,84 +142,69 @@ class DetectorApp:
         try:
             self.log("Loading AI Models...")
             self.engine = DetectionEngine() 
-            
             self.log("Opening Camera...")
-            if sys.platform == 'win32':
-                self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-            else:
-                self.cap = cv2.VideoCapture(0)
+            if sys.platform == 'win32': self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            else: self.cap = cv2.VideoCapture(0)
             
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             
-            if not self.cap.isOpened():
-                self.cap = cv2.VideoCapture(0)
-            
-            if not self.cap.isOpened():
-                raise Exception("Cannot open webcam.")
-
+            if not self.cap.isOpened(): self.cap = cv2.VideoCapture(0)
+            if not self.cap.isOpened(): raise Exception("Cannot open webcam.")
             self.root.after(0, self._finalize_setup)
-            
         except Exception as e:
-            err_msg = str(e)
-            self.log(f"Error: {err_msg}")
-            self.root.after(0, lambda: messagebox.showerror("Init Error", err_msg))
+            self.log(f"Error: {e}")
+            self.root.after(0, lambda: messagebox.showerror("Init Error", str(e)))
 
     def _finalize_setup(self):
         cv2.namedWindow(self.win_name, cv2.WINDOW_NORMAL)
         cv2.moveWindow(self.win_name, 1920, 0)
         self.running = True
         self.log("System Ready")
-        
-        # Reset timer before loop starts
         self.last_time = time.time()
         self.update_loop()
 
     def update_loop(self):
-        if not self.running:
-            return
+        if not self.running: return
         
-        # --- FPS CALCULATION ---
+        # --- Time Delta Calculation ---
         current_time = time.time()
         delta = current_time - self.last_time
         self.last_time = current_time
-        
-        # Avoid division by zero
-        if delta > 0:
-            self.frame_times.append(delta)
-            # Calculate average FPS over last 30 frames
-            avg_delta = sum(self.frame_times) / len(self.frame_times)
-            if avg_delta > 0:
-                self.current_fps = 1.0 / avg_delta
 
-        # --- KEY INPUT ---
         key = cv2.waitKey(1) & 0xFF
         if key == 27: 
             self.stop_demo()
             return
 
-        # --- PROCESSING ---
         ret, frame = self.cap.read()
         if ret:
             final_frame = self.engine.process_frame(frame, self.active_objects, self.patch_active)
             
+            # --- SYNCHRONIZED RECORDING ---
             if self.is_recording and self.video_writer:
-                self.video_writer.write(final_frame)
-                cv2.circle(final_frame, (30, 30), 10, (0, 0, 255), -1)
-
-            try:
-                cv2.imshow(self.win_name, final_frame)
-            except cv2.error:
-                self.stop_demo()
-                return
+                # Add the time passed since last loop to our "bucket"
+                self.record_accumulated_time += delta
+                
+                # While we have enough time in the bucket for a frame (0.05s)
+                while self.record_accumulated_time >= self.record_time_per_frame:
+                    # Write the frame
+                    final_frame_record = final_frame.copy()
+                    cv2.circle(final_frame_record, (30, 30), 10, (0, 0, 255), -1)
+                    self.video_writer.write(final_frame_record)
+                    
+                    # Remove that chunk of time from the bucket
+                    self.record_accumulated_time -= self.record_time_per_frame
+            
+            try: cv2.imshow(self.win_name, final_frame)
+            except cv2.error: self.stop_demo(); return
 
         self.root.after(10, self.update_loop)
 
     def stop_demo(self):
         self.running = False
-        self.stop_recording() 
-        if self.cap and self.cap.isOpened():
-            self.cap.release()
+        if self.is_recording: self.stop_recording()
+        if self.cap and self.cap.isOpened(): self.cap.release()
         cv2.destroyAllWindows()
         self.root.quit()
         self.root.destroy()
