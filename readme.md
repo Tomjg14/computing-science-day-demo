@@ -24,7 +24,7 @@ A real-time computer vision demonstration exploring object detection and adversa
 1.  **Clone the repository** (or download the files):
 
     ```bash
-    git clone [https://github.com/yourusername/adversarial-demo.git](https://github.com/yourusername/adversarial-demo.git)
+    git clone https://github.com/yourusername/adversarial-demo.git
     cd adversarial-demo
     ```
 
