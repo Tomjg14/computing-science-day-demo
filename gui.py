@@ -93,10 +93,13 @@ class DetectorApp:
         if not os.path.exists("recordings"):
             os.makedirs("recordings")
             
-        filename = f"recordings/demo_{int(time.time())}.avi"
-        # Setup VideoWriter (MJPG is widely supported)
-        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        # Note: Size must match the frame size exactly (1280x720)
+        # CHANGE 1: Update extension to .mp4
+        filename = f"recordings/demo_{int(time.time())}.mp4"
+        
+        # CHANGE 2: Use 'mp4v' codec (widely supported for .mp4)
+        # Note: If 'mp4v' fails on your specific machine, try 'avc1'
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        
         self.video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (1280, 720))
         
         self.is_recording = True
