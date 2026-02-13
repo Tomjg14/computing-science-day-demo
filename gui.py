@@ -5,13 +5,14 @@ import threading
 import sys
 import os
 import time
+from collections import deque
 from detector import DetectionEngine
 
 class DetectorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Control Panel")
-        self.root.geometry("400x550")  # Made taller for record button
+        self.root.geometry("400x550")
         
         # --- State ---
         self.active_objects = set()
@@ -22,6 +23,12 @@ class DetectorApp:
         self.engine = None
         self.cap = None
         self.win_name = "Live Detection Stream"
+        
+        # --- FPS Calculation State ---
+        self.last_time = time.time()
+        # Store last 30 frame times to get a smooth average
+        self.frame_times = deque(maxlen=30) 
+        self.current_fps = 15.0 # Default fallback
         
         # --- GUI Layout ---
         self.setup_ui()
@@ -61,7 +68,7 @@ class DetectorApp:
         # Instructions
         tk.Label(self.root, text="Press [SPACE] to toggle Glasses", fg="black", font=("Arial", 10, "bold")).pack(pady=5)
 
-        # --- Recording Controls ---
+        # Recording Controls
         record_frame = tk.Frame(self.root)
         record_frame.pack(pady=10)
         
@@ -93,18 +100,18 @@ class DetectorApp:
         if not os.path.exists("recordings"):
             os.makedirs("recordings")
             
-        # CHANGE 1: Update extension to .mp4
         filename = f"recordings/demo_{int(time.time())}.mp4"
         
-        # CHANGE 2: Use 'mp4v' codec (widely supported for .mp4)
-        # Note: If 'mp4v' fails on your specific machine, try 'avc1'
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        # SMART FPS: Use the actual calculated FPS from the last few seconds
+        # We ensure it's at least 5 to avoid errors if startup was slow
+        record_fps = max(5.0, round(self.current_fps))
         
-        self.video_writer = cv2.VideoWriter(filename, fourcc, 20.0, (1280, 720))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        self.video_writer = cv2.VideoWriter(filename, fourcc, record_fps, (1280, 720))
         
         self.is_recording = True
-        self.btn_record.config(text="Stop Recording", bg="red")
-        self.log(f"Recording to {filename}...")
+        self.btn_record.config(text=f"Stop Rec ({int(record_fps)} FPS)", bg="red")
+        self.log(f"Recording at {int(record_fps)} FPS...")
 
     def stop_recording(self):
         self.is_recording = False
@@ -172,30 +179,44 @@ class DetectorApp:
 
     def _finalize_setup(self):
         cv2.namedWindow(self.win_name, cv2.WINDOW_NORMAL)
-        # Try moving to second monitor
         cv2.moveWindow(self.win_name, 1920, 0)
         self.running = True
         self.log("System Ready")
+        
+        # Reset timer before loop starts
+        self.last_time = time.time()
         self.update_loop()
 
     def update_loop(self):
         if not self.running:
             return
+        
+        # --- FPS CALCULATION ---
+        current_time = time.time()
+        delta = current_time - self.last_time
+        self.last_time = current_time
+        
+        # Avoid division by zero
+        if delta > 0:
+            self.frame_times.append(delta)
+            # Calculate average FPS over last 30 frames
+            avg_delta = sum(self.frame_times) / len(self.frame_times)
+            if avg_delta > 0:
+                self.current_fps = 1.0 / avg_delta
 
+        # --- KEY INPUT ---
         key = cv2.waitKey(1) & 0xFF
         if key == 27: 
             self.stop_demo()
             return
 
+        # --- PROCESSING ---
         ret, frame = self.cap.read()
         if ret:
-            # Process Frame
             final_frame = self.engine.process_frame(frame, self.active_objects, self.patch_active)
             
-            # --- RECORDING LOGIC ---
             if self.is_recording and self.video_writer:
                 self.video_writer.write(final_frame)
-                # Visual Indicator (Red Dot)
                 cv2.circle(final_frame, (30, 30), 10, (0, 0, 255), -1)
 
             try:
@@ -208,7 +229,7 @@ class DetectorApp:
 
     def stop_demo(self):
         self.running = False
-        self.stop_recording() # Ensure file is saved
+        self.stop_recording() 
         if self.cap and self.cap.isOpened():
             self.cap.release()
         cv2.destroyAllWindows()
