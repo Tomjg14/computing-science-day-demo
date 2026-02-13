@@ -1,4 +1,4 @@
-# Adversarial YOLO Demo
+# Real-time YOLO Computer Vision Demonstration
 
 A real-time computer vision demonstration exploring object detection and adversarial attacks. This project uses **YOLOv8** to detect faces and objects via webcam, featuring a "digital adversarial glasses" mode that simulates how specific patterns can fool AI models into misclassifying a human face (e.g., as a "Panda").
 
@@ -44,3 +44,10 @@ Run the main script to start the application:
 ```bash
 python main.py
 ```
+
+## Demonstration
+
+https://github.com/user-attachments/assets/7ac8ed9b-fa2a-4d28-b382-aa10f27e04bd
+
+
+
