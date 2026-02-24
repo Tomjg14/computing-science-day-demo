@@ -1,8 +1,7 @@
-opencv-python
-ultralytics
-torch
-torchvision
-pillow
-numpy
-requests
 customtkinter
+opencv-python
+pillow
+requests
+numpy
+ultralytics
+face_recognition

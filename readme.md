@@ -41,8 +41,26 @@ This demo integrates several key concepts in modern Computer Vision:
     cd computing-science-day-demo
     ```
 
-2.  **Install dependencies**:
-    It is recommended to use a virtual environment (conda or venv).
+2.  **Set up Conda Environment (Recommended)**:
+    If you don't have Conda installed, download Miniconda.
+
+    ```bash
+    conda create -n cv-demo python=3.10
+    conda activate cv-demo
+    ```
+
+3.  **System Prerequisites**:
+    We recommend installing `cmake` and `dlib` via Conda to avoid compilation issues on all platforms.
+
+    ```bash
+    conda install -c conda-forge cmake dlib
+    ```
+
+    **Platform Specific Notes**:
+    - **Linux**: If you encounter GUI errors, install system Tkinter: `sudo apt-get install python3-tk`
+    - **macOS**: If you encounter build errors, ensure Xcode tools are installed: `xcode-select --install`
+
+4.  **Install Python dependencies**:
 
     ```bash
     pip install -r requirements.txt
