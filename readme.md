@@ -42,7 +42,7 @@ This demo integrates several key concepts in modern Computer Vision:
     ```
 
 2.  **Set up Conda Environment (Recommended)**:
-    If you don't have Conda installed, download Miniconda.
+    If you don't have Conda installed, download [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install).
 
     ```bash
     conda create -n cv-demo python=3.10
