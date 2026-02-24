@@ -46,6 +46,11 @@ PATCH_FILES = ["glasses.png", "patch.png", "glasses.jpg"]
 # Scale: How wide glasses are relative to eye distance (2.5x is standard width)
 GLASSES_SCALE = 2.5
 
+# --- QR CODE OVERLAY ---
+QR_CODE_FILENAME = "images/qr-code.png"
+QR_CODE_WIDTH = 120
+QR_CODE_POS = (20, 20)  # (x, y) Top-left corner
+
 # --- FACE RECOGNITION ---
 KNOWN_FACES_DIR = "known_faces"
 FACE_MATCH_THRESHOLD = 0.5  # Lower is stricter (0.6 is typical default)

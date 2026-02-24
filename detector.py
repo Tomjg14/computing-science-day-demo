@@ -62,6 +62,18 @@ class DetectionEngine:
         
         self.resolver = SmartResolver(self.model_objects.names)
         self.glasses_img = PatchGenerator.get_glasses_mask()
+        
+        # Load QR Code Overlay
+        self.qr_img = None
+        qr_path = resource_path(config.QR_CODE_FILENAME)
+        if os.path.exists(qr_path):
+            img = cv2.imread(qr_path, cv2.IMREAD_UNCHANGED)
+            if img is not None:
+                h, w = img.shape[:2]
+                scale = config.QR_CODE_WIDTH / w
+                self.qr_img = cv2.resize(img, (config.QR_CODE_WIDTH, int(h * scale)))
+                self.log(f"Loaded QR Code: {config.QR_CODE_FILENAME}")
+
         self.log("Models Loaded.")
         
         # Face Recognition Data
@@ -331,5 +343,22 @@ class DetectionEngine:
                             lbl = f"{name} {conf:.0%}"
                             cv2.rectangle(annotated, (x, y), (x+w, y+h), color, 2)
                             cv2.putText(annotated, lbl, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+        # Draw QR Code Overlay
+        if self.qr_img is not None:
+            qh, qw = self.qr_img.shape[:2]
+            qx, qy = config.QR_CODE_POS
+            h_frm, w_frm = annotated.shape[:2]
+            
+            if qy + qh < h_frm and qx + qw < w_frm:
+                # Handle Transparency (4 channels) vs Standard (3 channels)
+                if len(self.qr_img.shape) > 2 and self.qr_img.shape[2] == 4:
+                    alpha = self.qr_img[:, :, 3] / 255.0
+                    roi = annotated[qy:qy+qh, qx:qx+qw]
+                    for c in range(3):
+                        roi[:, :, c] = (alpha * self.qr_img[:, :, c] + (1.0 - alpha) * roi[:, :, c])
+                    annotated[qy:qy+qh, qx:qx+qw] = roi
+                else:
+                    annotated[qy:qy+qh, qx:qx+qw] = self.qr_img[:, :, :3]
 
         return annotated
