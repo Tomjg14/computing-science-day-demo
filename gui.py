@@ -9,6 +9,7 @@ import time
 from collections import deque
 import config
 from detector import DetectionEngine
+from PIL import Image, ImageTk
 
 class DetectorApp:
     def __init__(self, root):
@@ -23,6 +24,7 @@ class DetectorApp:
         self.video_writer = None
         self.engine = None
         self.cap = None
+        self.current_frame = None
         
         # Timing state
         self.last_time = time.time()
@@ -61,6 +63,15 @@ class DetectorApp:
         
         ctk.CTkButton(self.root, text="Remove Selected", font=("Arial", 12), command=self.remove_object).pack(pady=2)
         ctk.CTkButton(self.root, text="Clear All", font=("Arial", 12), fg_color="#555555", hover_color="#333333", command=self.clear_all_objects).pack(pady=2)
+
+        ctk.CTkLabel(self.root, text="Face Recognition", font=("Arial", 12, "bold")).pack(pady=(15, 5))
+        
+        self.lbl_face_count = ctk.CTkLabel(self.root, text="Known Faces: 0", text_color="gray", font=("Arial", 11))
+        self.lbl_face_count.pack(pady=(0, 5))
+
+        self.btn_capture_face = ctk.CTkButton(self.root, text="Capture & Name Face", fg_color="#2E8B57", hover_color="#206040", command=self.open_capture_window)
+        self.btn_capture_face.pack(pady=2)
+        self.btn_manage_faces = ctk.CTkButton(self.root, text="Manage Database", fg_color="#444444", hover_color="#333333", command=self.open_face_manager).pack(pady=2)
 
         ctk.CTkLabel(self.root, text="Press [SPACE] to toggle Glasses", font=("Arial", 12, "bold")).pack(pady=5)
 
@@ -160,6 +171,102 @@ class DetectorApp:
         self.listbox.delete(0, tk.END)
         self.log("Cleared all objects")
 
+    def update_face_count(self):
+        if self.engine:
+            count = len(self.engine.known_face_names)
+            self.lbl_face_count.configure(text=f"Known Faces: {count}")
+
+    def open_face_manager(self):
+        if not self.engine: return
+        
+        top = ctk.CTkToplevel(self.root)
+        top.title("Manage Faces")
+        top.geometry("300x400")
+        top.attributes("-topmost", True)
+
+        lb = tk.Listbox(top, bg="#2b2b2b", fg="white", borderwidth=0, highlightthickness=0)
+        lb.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        for name in self.engine.known_face_names:
+            lb.insert(tk.END, name)
+
+        def delete_selected():
+            sel = lb.curselection()
+            if not sel: return
+            name = lb.get(sel[0])
+            if self.engine.remove_face(name):
+                lb.delete(sel[0])
+                self.update_face_count()
+                messagebox.showinfo("Removed", f"Removed '{name}' from database.", parent=top)
+
+        def clear_all():
+            if messagebox.askyesno("Confirm", "Are you sure you want to delete ALL known faces?", parent=top):
+                self.engine.clear_known_faces()
+                lb.delete(0, tk.END)
+                self.update_face_count()
+                messagebox.showinfo("Cleared", "Database cleared.", parent=top)
+
+        ctk.CTkButton(top, text="Delete Selected", fg_color="#8B0000", hover_color="#600000", command=delete_selected).pack(pady=5)
+        ctk.CTkButton(top, text="Clear Database", fg_color="#555555", hover_color="#333333", command=clear_all).pack(pady=(0, 10))
+
+    def open_capture_window(self):
+        if self.current_frame is None or not self.engine:
+            messagebox.showwarning("Error", "No video feed available.")
+            return
+
+        # Find the largest face in the current frame
+        results = self.engine.model_face(self.current_frame, verbose=False, conf=config.CONF_THRESHOLD_FACE)
+        best_box = None
+        max_area = 0
+        
+        for r in results:
+            for box in r.boxes:
+                if int(box.cls[0]) == 0:
+                    x, y, w, h = self.engine.get_coords(box)
+                    if w * h > max_area:
+                        max_area = w * h
+                        best_box = (x, y, w, h)
+        
+        if not best_box:
+            messagebox.showinfo("No Face", "No face detected in the current frame.")
+            return
+
+        # Create Popup
+        top = ctk.CTkToplevel(self.root)
+        top.title("Save Face")
+        top.geometry("300x350")
+        top.attributes("-topmost", True)
+
+        x, y, w, h = best_box
+        face_crop = self.current_frame[y:y+h, x:x+w]
+        face_rgb = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
+        pil_img = Image.fromarray(face_rgb)
+        # Resize for display
+        pil_img.thumbnail((200, 200))
+        tk_img = ImageTk.PhotoImage(pil_img)
+
+        ctk.CTkLabel(top, text="Detected Face:").pack(pady=10)
+        lbl_img = ctk.CTkLabel(top, text="", image=tk_img)
+        lbl_img.image = tk_img # Keep ref
+        lbl_img.pack(pady=5)
+
+        entry_name = ctk.CTkEntry(top, placeholder_text="Enter Name")
+        entry_name.pack(pady=10)
+        entry_name.focus()
+
+        def save_action():
+            name = entry_name.get().strip()
+            if not name: return
+            success, msg = self.engine.register_face(self.current_frame, best_box, name)
+            if success:
+                self.log(msg)
+                self.update_face_count()
+                top.destroy()
+            else:
+                messagebox.showerror("Error", msg)
+
+        ctk.CTkButton(top, text="Save", command=save_action).pack(pady=10)
+
     def start_initialization_thread(self):
         t = threading.Thread(target=self._init_resources, daemon=True)
         t.start()
@@ -185,6 +292,13 @@ class DetectorApp:
     def _finalize_setup(self):
         cv2.namedWindow(config.WINDOW_NAME, cv2.WINDOW_NORMAL)
         cv2.moveWindow(config.WINDOW_NAME, config.WINDOW_POS_X, config.WINDOW_POS_Y)
+
+        # Check for face recognition library and update GUI accordingly
+        if not self.engine.HAS_FACE_REC:
+            self.btn_capture_face.configure(state=tk.DISABLED, text="Capture (face_recognition missing)")
+            self.log("Face recognition disabled. See console.")
+
+        self.update_face_count()
         self.running = True
         self.log("System Ready")
         self.last_time = time.time()
@@ -204,6 +318,7 @@ class DetectorApp:
 
         ret, frame = self.cap.read()
         if ret:
+            self.current_frame = frame.copy() # Store for capture
             final_frame = self.engine.process_frame(frame, self.active_objects, self.patch_active)
             
             if self.is_recording and self.video_writer:

@@ -10,6 +10,13 @@ import config  # <--- IMPORT CONFIG
 from patch_generator import PatchGenerator
 from utils import resource_path
 
+try:
+    import face_recognition
+    HAS_FACE_REC = True
+except ImportError:
+    HAS_FACE_REC = False
+    print("[WARNING] 'face_recognition' library not found. Recognition disabled.")
+
 class SmartResolver:
     def __init__(self, model_names):
         self.names = model_names 
@@ -34,6 +41,7 @@ class SmartResolver:
 
 class DetectionEngine:
     def __init__(self, status_callback=None):
+        self.HAS_FACE_REC = HAS_FACE_REC
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.status_callback = status_callback
         
@@ -55,6 +63,11 @@ class DetectionEngine:
         self.resolver = SmartResolver(self.model_objects.names)
         self.glasses_img = PatchGenerator.get_glasses_mask()
         self.log("Models Loaded.")
+        
+        # Face Recognition Data
+        self.known_face_encodings = []
+        self.known_face_names = []
+        if HAS_FACE_REC: self.load_known_faces()
 
     def log(self, msg):
         if self.status_callback: self.status_callback(msg)
@@ -80,6 +93,83 @@ class DetectionEngine:
         except Exception:
             pass
         return config.MODEL_OBJ_FILENAME # Fallback
+
+    def load_known_faces(self):
+        if not os.path.exists(config.KNOWN_FACES_DIR):
+            os.makedirs(config.KNOWN_FACES_DIR)
+            return
+
+        self.log("Loading Known Faces...")
+        count = 0
+        for filename in os.listdir(config.KNOWN_FACES_DIR):
+            if filename.lower().endswith(('.jpg', '.png', '.jpeg')):
+                path = os.path.join(config.KNOWN_FACES_DIR, filename)
+                try:
+                    image = face_recognition.load_image_file(path)
+                    encodings = face_recognition.face_encodings(image)
+                    if encodings:
+                        self.known_face_encodings.append(encodings[0])
+                        name = os.path.splitext(filename)[0]
+                        self.known_face_names.append(name)
+                        count += 1
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
+        self.log(f"Loaded {count} known faces.")
+
+    def register_face(self, frame, box, name):
+        if not HAS_FACE_REC: return False, "Library missing"
+        
+        x, y, w, h = box
+        # Ensure crop is valid
+        h_frm, w_frm = frame.shape[:2]
+        x, y = max(0, x), max(0, y)
+        w, h = min(w, w_frm - x), min(h, h_frm - y)
+        
+        if w < 20 or h < 20: return False, "Face too small"
+
+        face_img = frame[y:y+h, x:x+w]
+        rgb_face = cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
+        
+        encodings = face_recognition.face_encodings(rgb_face)
+        if not encodings:
+            # Fallback: Force the YOLO box as the face location if dlib misses it
+            h_img, w_img = rgb_face.shape[:2]
+            encodings = face_recognition.face_encodings(rgb_face, known_face_locations=[(0, w_img, h_img, 0)])
+
+        if not encodings: return False, "No face features found"
+        
+        # Save to disk
+        if not os.path.exists(config.KNOWN_FACES_DIR): os.makedirs(config.KNOWN_FACES_DIR)
+        
+        clean_name = "".join(c for c in name if c.isalnum() or c in (' ', '-', '_')).strip()
+        if not clean_name: clean_name = "unknown"
+        
+        save_path = os.path.join(config.KNOWN_FACES_DIR, f"{clean_name}.jpg")
+        cv2.imwrite(save_path, face_img)
+        
+        self.known_face_encodings.append(encodings[0])
+        self.known_face_names.append(clean_name)
+        return True, f"Saved {clean_name}"
+
+    def remove_face(self, name):
+        if name in self.known_face_names:
+            idx = self.known_face_names.index(name)
+            self.known_face_names.pop(idx)
+            self.known_face_encodings.pop(idx)
+            
+            # Delete file
+            file_path = os.path.join(config.KNOWN_FACES_DIR, f"{name}.jpg")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return True
+        return False
+
+    def clear_known_faces(self):
+        self.known_face_names.clear()
+        self.known_face_encodings.clear()
+        if os.path.exists(config.KNOWN_FACES_DIR):
+            for f in os.listdir(config.KNOWN_FACES_DIR):
+                os.remove(os.path.join(config.KNOWN_FACES_DIR, f))
 
     def resolve_object_name(self, name):
         return self.resolver.resolve(name)
@@ -165,6 +255,30 @@ class DetectionEngine:
             frame[y1:y2, x1:x2, c] = (alpha_s * glasses_rez[y1o:y2o, x1o:x2o, c] + (1.0 - alpha_s) * frame[y1:y2, x1:x2, c])
         return frame
 
+    def identify_face(self, frame, x, y, w, h):
+        if not HAS_FACE_REC or not self.known_face_encodings:
+            return None, 0.0
+
+        face_img = frame[y:y+h, x:x+w]
+        if face_img.size == 0: return None, 0.0
+        
+        rgb_face = cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
+        try:
+            # Try detection first, fallback to forced location
+            encodings = face_recognition.face_encodings(rgb_face)
+            if not encodings:
+                h_img, w_img = rgb_face.shape[:2]
+                encodings = face_recognition.face_encodings(rgb_face, known_face_locations=[(0, w_img, h_img, 0)])
+
+            if encodings:
+                matches = face_recognition.compare_faces(self.known_face_encodings, encodings[0], tolerance=config.FACE_MATCH_THRESHOLD)
+                dists = face_recognition.face_distance(self.known_face_encodings, encodings[0])
+                best_idx = np.argmin(dists)
+                if matches[best_idx]:
+                    return self.known_face_names[best_idx], 1.0 - dists[best_idx]
+        except Exception: pass
+        return None, 0.0
+
     def process_frame(self, frame, active_objects, patch_active):
         results_face = self.model_face(frame, verbose=False, conf=config.CONF_THRESHOLD_FACE)
         
@@ -186,6 +300,11 @@ class DetectionEngine:
                     
                     label = f"Face {conf:.0%}"
                     color = config.COLOR_FACE_NORMAL
+
+                    # Attempt Recognition
+                    rec_name, rec_conf = self.identify_face(frame, x, y, w, h)
+                    if rec_name:
+                        label = f"{rec_name} {rec_conf:.0%}"
 
                     if patch_active:
                         kp = kpts[i].cpu().numpy() if kpts is not None else None

@@ -18,6 +18,7 @@ env/
 # --- Project Specifics ---
 # Ignore the output folder for video recordings
 recordings/
+known_faces/
 
 # --- Large AI Models ---
 # It is best practice NOT to commit large model weights to Git.
