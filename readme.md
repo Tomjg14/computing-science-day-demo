@@ -19,6 +19,22 @@ A real-time computer vision demonstration exploring object detection and adversa
 - **Recording**: Capture your demo sessions to `.avi` files with a single click.
 - **Customization**: Drop in your own `glasses.png` to test different patch designs.
 
+## 🖥️ User Interface Guide
+
+The control panel is designed for easy interaction during live demos:
+
+- **Object Detection**:
+  - **Add Object**: Type an object name (e.g., "keyboard") to start detecting it.
+  - **Quick Add**: One-click buttons for common objects like Mobile, Cup, Bottle, and Laptop.
+  - **Manage Objects**: View and remove currently active detection targets.
+- **Face Recognition**:
+  - **Capture & Name Face**: Freezes the current frame to let you label and save a detected face.
+  - **Manage Database**: View list of known faces or clear the database.
+- **System Controls**:
+  - **Start/Stop Recording**: Saves the live feed to the `recordings/` folder.
+  - **Switch Camera**: Cycle through available webcams.
+  - **Shortcuts**: Press `[SPACE]` to toggle digital glasses, or `[F]` for fullscreen mode.
+
 ## 🧠 Background & Techniques
 
 This demo integrates several key concepts in modern Computer Vision:
@@ -79,3 +95,7 @@ python main.py
 ## Demonstration
 
 https://github.com/user-attachments/assets/7ac8ed9b-fa2a-4d28-b382-aa10f27e04bd
+
+## Contact
+
+Any questions, please send an email to: [tom.janssen-groesbeek@ru.nl](mailto:tom.janssen-groesbeek@ru.nl)

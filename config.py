@@ -3,9 +3,10 @@ GUI_TITLE = "Control Panel"
 GUI_SIZE = "400x550"
 WINDOW_NAME = "Live Detection Stream"
 GUI_UPDATE_DELAY = 10  # Milliseconds between loop updates
-GUI_TEXT = "Adversarial Demo"
+GUI_TEXT = "Real-time YOLO Computer Vision Demonstration"
 GUI_TEXT_FONT = ("Arial", 16, "bold")
 GUI_STATUS_LBL_COLOR = "blue"
+GUI_SCALE_FACTOR = 2 # 1.0 = default, >1.0 = larger, <1.0 = smaller
 GUI_SUGGESTION_LBL_COLOR = "gray"
 
 # --- CAMERA ---
@@ -15,6 +16,7 @@ FRAME_HEIGHT = 720
 # Monitor Position: Move window to second screen (x=1920)
 WINDOW_POS_X = 1920
 WINDOW_POS_Y = 0
+WINDOW_FULLSCREEN = False
 
 # --- RECORDING ---
 RECORDING_FOLDER = "recordings"
