@@ -21,6 +21,9 @@ A real-time computer vision demonstration exploring object detection and adversa
 
 ## 🖥️ User Interface Guide
 
+<img width="945" height="912" alt="ui" src="https://github.com/user-attachments/assets/40986449-585c-43df-85ff-2e114bd9b8d3" />
+
+
 The control panel is designed for easy interaction during live demos:
 
 - **Object Detection**:
