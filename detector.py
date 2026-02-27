@@ -339,6 +339,7 @@ class DetectionEngine:
         # Sort by area descending (Largest/Closest faces first)
         faces_data.sort(key=lambda f: f['area'], reverse=True)
 
+        matched_names = set()
         # Process sorted faces
         for face in faces_data:
             box = face['box']
@@ -356,13 +357,16 @@ class DetectionEngine:
             # Check history or Attempt Recognition
             if track_id is not None and track_id in self.face_track_history:
                 rec_name = self.face_track_history[track_id]
-                label = f"{rec_name}"
+                if rec_name not in matched_names:
+                    matched_names.add(rec_name)
+                    label = f"{rec_name}"
             else:
                 # Only run heavy recognition if we haven't hit the limit
                 if recognitions_this_frame < MAX_RECOGNITIONS:
                     rec_name, rec_conf = self.identify_face(frame, x, y, w, h)
                     recognitions_this_frame += 1
-                    if rec_name:
+                    if rec_name and rec_name not in matched_names:
+                        matched_names.add(rec_name)
                         if track_id is not None:
                             self.face_track_history[track_id] = rec_name
                         label = f"{rec_name} {rec_conf:.0%}"
