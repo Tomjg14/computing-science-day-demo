@@ -1,3 +1,6 @@
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import tkinter as tk
 import customtkinter as ctk
 from gui import DetectorApp

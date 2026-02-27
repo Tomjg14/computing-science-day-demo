@@ -1,12 +1,12 @@
 # --- SYSTEM & GUI ---
 GUI_TITLE = "Control Panel"
-GUI_SIZE = "400x550"
+GUI_SIZE = "400x650"
 WINDOW_NAME = "Live Detection Stream"
 GUI_UPDATE_DELAY = 10  # Milliseconds between loop updates
 GUI_TEXT = "Real-time YOLO Computer Vision Demonstration"
 GUI_TEXT_FONT = ("Arial", 16, "bold")
 GUI_STATUS_LBL_COLOR = "blue"
-GUI_SCALE_FACTOR = 2 # 1.0 = default, >1.0 = larger, <1.0 = smaller
+GUI_SCALE_FACTOR = 1.8 # 1.0 = default, >1.0 = larger, <1.0 = smaller
 GUI_SUGGESTION_LBL_COLOR = "gray"
 
 # --- CAMERA ---
@@ -55,4 +55,4 @@ QR_CODE_POS = (20, 20)  # (x, y) Top-left corner
 
 # --- FACE RECOGNITION ---
 KNOWN_FACES_DIR = "known_faces"
-FACE_MATCH_THRESHOLD = 0.5  # Lower is stricter (0.6 is typical default)
+FACE_MATCH_THRESHOLD = 0.6  # Lower is stricter (0.6 is typical default)

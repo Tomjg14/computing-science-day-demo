@@ -80,6 +80,7 @@ class DetectionEngine:
         self.known_face_encodings = []
         self.known_face_names = []
         if HAS_FACE_REC: self.load_known_faces()
+        self.face_track_history = {}
 
     def log(self, msg):
         if self.status_callback: self.status_callback(msg)
@@ -128,18 +129,19 @@ class DetectionEngine:
                     print(f"Error loading {filename}: {e}")
         self.log(f"Loaded {count} known faces.")
 
-    def register_face(self, frame, box, name):
-        if not HAS_FACE_REC: return False, "Library missing"
-        
+    def extract_face(self, frame, box):
         x, y, w, h = box
-        # Ensure crop is valid
         h_frm, w_frm = frame.shape[:2]
         x, y = max(0, x), max(0, y)
         w, h = min(w, w_frm - x), min(h, h_frm - y)
         
-        if w < 20 or h < 20: return False, "Face too small"
+        if w < 20 or h < 20: return None
+        return frame[y:y+h, x:x+w]
 
-        face_img = frame[y:y+h, x:x+w]
+    def register_face(self, face_img, name):
+        if not HAS_FACE_REC: return False, "Library missing"
+        if face_img is None: return False, "No face image provided"
+        
         rgb_face = cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
         
         encodings = face_recognition.face_encodings(rgb_face)
@@ -173,12 +175,18 @@ class DetectionEngine:
             file_path = os.path.join(config.KNOWN_FACES_DIR, f"{name}.jpg")
             if os.path.exists(file_path):
                 os.remove(file_path)
+            
+            # Remove from tracking history so label resets immediately
+            keys_to_remove = [k for k, v in self.face_track_history.items() if v == name]
+            for k in keys_to_remove:
+                del self.face_track_history[k]
             return True
         return False
 
     def clear_known_faces(self):
         self.known_face_names.clear()
         self.known_face_encodings.clear()
+        self.face_track_history.clear()
         if os.path.exists(config.KNOWN_FACES_DIR):
             for f in os.listdir(config.KNOWN_FACES_DIR):
                 os.remove(os.path.join(config.KNOWN_FACES_DIR, f))
@@ -271,6 +279,11 @@ class DetectionEngine:
         if not HAS_FACE_REC or not self.known_face_encodings:
             return None, 0.0
 
+        # Clamp coordinates to frame dimensions (same as register_face)
+        h_frm, w_frm = frame.shape[:2]
+        x, y = max(0, x), max(0, y)
+        w, h = min(w, w_frm - x), min(h, h_frm - y)
+
         face_img = frame[y:y+h, x:x+w]
         if face_img.size == 0: return None, 0.0
         
@@ -288,11 +301,12 @@ class DetectionEngine:
                 best_idx = np.argmin(dists)
                 if matches[best_idx]:
                     return self.known_face_names[best_idx], 1.0 - dists[best_idx]
-        except Exception: pass
+        except Exception as e:
+            print(f"[ERROR] Recognition failed: {e}")
         return None, 0.0
 
     def process_frame(self, frame, active_objects, patch_active):
-        results_face = self.model_face(frame, verbose=False, conf=config.CONF_THRESHOLD_FACE)
+        results_face = self.model_face.track(frame, persist=True, verbose=False, conf=config.CONF_THRESHOLD_FACE)
         
         results_obj = None
         if active_objects:
@@ -300,7 +314,12 @@ class DetectionEngine:
 
         annotated = frame.copy()
 
-        # Draw Faces
+        # Performance: Limit heavy recognition calls per frame to prevent lag
+        recognitions_this_frame = 0
+        MAX_RECOGNITIONS = 2
+
+        # Collect all faces first to sort by size (Area)
+        faces_data = []
         for r in results_face:
             boxes = r.boxes
             kpts = r.keypoints.data if r.keypoints is not None else None
@@ -308,26 +327,56 @@ class DetectionEngine:
             for i, box in enumerate(boxes):
                 if int(box.cls[0]) == 0:
                     x, y, w, h = self.get_coords(box)
-                    conf = float(box.conf[0])
-                    
-                    label = f"Face {conf:.0%}"
-                    color = config.COLOR_FACE_NORMAL
+                    area = w * h
+                    kp = kpts[i] if kpts is not None else None
+                    faces_data.append({
+                        'box': box,
+                        'coords': (x, y, w, h),
+                        'kpts': kp,
+                        'area': area
+                    })
 
-                    # Attempt Recognition
+        # Sort by area descending (Largest/Closest faces first)
+        faces_data.sort(key=lambda f: f['area'], reverse=True)
+
+        # Process sorted faces
+        for face in faces_data:
+            box = face['box']
+            x, y, w, h = face['coords']
+            kp = face['kpts']
+            
+            conf = float(box.conf[0])
+            
+            # Get Track ID if available
+            track_id = int(box.id[0]) if box.id is not None else None
+            
+            label = f"Face {conf:.0%}"
+            color = config.COLOR_FACE_NORMAL
+
+            # Check history or Attempt Recognition
+            if track_id is not None and track_id in self.face_track_history:
+                rec_name = self.face_track_history[track_id]
+                label = f"{rec_name}"
+            else:
+                # Only run heavy recognition if we haven't hit the limit
+                if recognitions_this_frame < MAX_RECOGNITIONS:
                     rec_name, rec_conf = self.identify_face(frame, x, y, w, h)
+                    recognitions_this_frame += 1
                     if rec_name:
+                        if track_id is not None:
+                            self.face_track_history[track_id] = rec_name
                         label = f"{rec_name} {rec_conf:.0%}"
 
-                    if patch_active:
-                        kp = kpts[i].cpu().numpy() if kpts is not None else None
-                        annotated = self.overlay_glasses_advanced(annotated, kp, (x,y,w,h))
-                        label = f"Panda {conf:.0%}" 
-                        color = config.COLOR_FACE_PANDA
+            if patch_active:
+                kp_np = kp.cpu().numpy() if kp is not None else None
+                annotated = self.overlay_glasses_advanced(annotated, kp_np, (x,y,w,h))
+                label = f"Panda {conf:.0%}" 
+                color = config.COLOR_FACE_PANDA
 
-                    cv2.rectangle(annotated, (x, y), (x+w, y+h), color, 2)
-                    (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
-                    cv2.rectangle(annotated, (x, y-30), (x+tw, y), color, -1)
-                    cv2.putText(annotated, label, (x, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            cv2.rectangle(annotated, (x, y), (x+w, y+h), color, 2)
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+            cv2.rectangle(annotated, (x, y-30), (x+tw, y), color, -1)
+            cv2.putText(annotated, label, (x, y-8), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
         # Draw Objects
         if results_obj:

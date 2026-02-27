@@ -108,6 +108,7 @@ class DetectorApp:
         self.btn_capture_face = ctk.CTkButton(self.ui_box, text="Capture & Name Face", width=self.BTN_WIDTH, fg_color="#2E8B57", hover_color="#206040", command=self.open_capture_window)
         self.btn_capture_face.pack(pady=self.scale(2))
         self.btn_manage_faces = ctk.CTkButton(self.ui_box, text="Manage Database", width=self.BTN_WIDTH, fg_color="#444444", hover_color="#333333", command=self.open_face_manager).pack(pady=self.scale(2))
+        ctk.CTkButton(self.ui_box, text="Inspect Pixel Grid", width=self.BTN_WIDTH, fg_color="#444444", hover_color="#333333", command=self.open_pixel_viewer).pack(pady=self.scale(2))
 
     def _create_footer_controls(self):
         ctk.CTkLabel(self.ui_box, text="[SPACE] Glasses | [F] Fullscreen", font=("Arial", self.scale(12), "bold")).pack(pady=self.scale(5))
@@ -252,6 +253,120 @@ class DetectorApp:
         ctk.CTkButton(top, text="Delete Selected", font=("Arial", self.scale(12)), fg_color="#8B0000", hover_color="#600000", command=delete_selected).pack(pady=self.scale(5))
         ctk.CTkButton(top, text="Clear Database", font=("Arial", self.scale(12)), fg_color="#555555", hover_color="#333333", command=clear_all).pack(pady=(0, self.scale(10)))
 
+    def open_pixel_viewer(self):
+        if not self.engine or not self.engine.known_face_names:
+            messagebox.showinfo("Info", "No known faces to inspect.")
+            return
+
+        top = ctk.CTkToplevel(self.root)
+        top.title("Pixel Inspector")
+
+        # --- DYNAMIC SIZING ---
+        screen_h = self.root.winfo_screenheight()
+        
+        # Set window height to 60% of screen height to ensure it fits
+        win_h = int(screen_h * 0.6)
+        
+        # Calculate image size (approx 75% of window height to leave room for labels/buttons)
+        image_h = int(win_h * 0.75)
+        
+        # Calculate window width (Two square images + padding factor ~2.3)
+        win_w = int(image_h * 2.3)
+        
+        top.geometry(f"{win_w}x{win_h}")
+        # --- END DYNAMIC SIZING ---
+
+        top.attributes("-topmost", True)
+
+        # Selection Frame
+        frm_sel = ctk.CTkFrame(top, fg_color="transparent")
+        frm_sel.pack(pady=self.scale(10), fill="x", padx=self.scale(10))
+        ctk.CTkLabel(frm_sel, text="Select Face:", font=("Arial", self.scale(12))).pack(side=tk.LEFT)
+        
+        combo_faces = ctk.CTkComboBox(frm_sel, values=self.engine.known_face_names, state="readonly")
+        combo_faces.pack(side=tk.LEFT, padx=self.scale(10))
+        if self.engine.known_face_names: combo_faces.set(self.engine.known_face_names[0])
+
+        # Content Frame (Split View)
+        frm_content = ctk.CTkFrame(top, fg_color="transparent")
+        frm_content.pack(fill=tk.BOTH, expand=True, padx=self.scale(10), pady=self.scale(10))
+
+        # Left Side: Original Image
+        frm_left = ctk.CTkFrame(frm_content, fg_color="transparent")
+        frm_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, self.scale(20)))
+        
+        ctk.CTkLabel(frm_left, text="Original Image", font=("Arial", self.scale(14), "bold")).pack(pady=(0, self.scale(5)))
+        lbl_original = ctk.CTkLabel(frm_left, text="")
+        lbl_original.pack(fill=tk.BOTH, expand=True)
+
+        # Right Side: Pixel Grid
+        frm_right = ctk.CTkFrame(frm_content, fg_color="transparent")
+        frm_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        ctk.CTkLabel(frm_right, text="Pixel Grid (32x32)", font=("Arial", self.scale(14), "bold")).pack(pady=(0, self.scale(5)))
+        canvas = tk.Canvas(frm_right, bg="#1a1a1a", highlightthickness=0)
+        canvas.pack(fill=tk.BOTH, expand=True)
+
+        def draw_grid(name):
+            canvas.delete("all")
+            
+            # Find file with correct extension
+            path = None
+            for ext in [".jpg", ".png", ".jpeg"]:
+                p = os.path.join(config.KNOWN_FACES_DIR, f"{name}{ext}")
+                if os.path.exists(p):
+                    path = p
+                    break
+            if not path: return
+
+            # Load and process image
+            img = cv2.imread(path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            
+            # Resize to grid (e.g., 32x32) - Use INTER_AREA for clear downsampling
+            grid_size = 32
+            small = cv2.resize(img, (grid_size, grid_size), interpolation=cv2.INTER_AREA)
+            
+            # Calculate cell size based on canvas
+            cw, ch = canvas.winfo_width(), canvas.winfo_height()
+            if cw < 10: 
+                # Use the calculated image height as a fallback for initial drawing
+                cw, ch = image_h, image_h
+            
+            # Create background image (Upscaled with NEAREST to show sharp pixels)
+            display_img = cv2.resize(small, (cw, ch), interpolation=cv2.INTER_NEAREST)
+            pil_img = Image.fromarray(display_img)
+            self.pixel_grid_image = ImageTk.PhotoImage(pil_img) # Keep reference
+            canvas.create_image(0, 0, image=self.pixel_grid_image, anchor="nw")
+            
+            cell_w = cw / grid_size
+            cell_h = ch / grid_size
+            
+            # Dynamic font size based on cell height (approx 40% of cell height)
+            font_size = max(6, int(cell_h * 0.35))
+
+            for y in range(grid_size):
+                for x in range(grid_size):
+                    r, g, b = [int(c) for c in small[y, x]]
+                    
+                    # Text color (white for dark pixels, black for light)
+                    brightness = (r * 299 + g * 587 + b * 114) / 1000
+                    txt_color = "white" if brightness < 128 else "black"
+                    val = int(brightness) # Show grayscale value
+                    
+                    cx = x * cell_w + cell_w / 2
+                    cy = y * cell_h + cell_h / 2
+                    canvas.create_text(cx, cy, text=str(val), fill=txt_color, font=("Arial", font_size))
+            
+            # Show Original on Left (Resized to match grid size for symmetry)
+            img_orig_disp = cv2.resize(img, (cw, ch), interpolation=cv2.INTER_LINEAR)
+            pil_orig = Image.fromarray(img_orig_disp)
+            tk_orig = ImageTk.PhotoImage(pil_orig)
+            lbl_original.configure(image=tk_orig)
+            lbl_original.image = tk_orig
+
+        ctk.CTkButton(frm_sel, text="Load", width=self.scale(60), command=lambda: draw_grid(combo_faces.get())).pack(side=tk.LEFT)
+        
     def open_capture_window(self):
         if self.current_frame is None or not self.engine:
             messagebox.showwarning("Error", "No video feed available.")
@@ -280,8 +395,12 @@ class DetectorApp:
         top.geometry(f"{self.scale(300)}x{self.scale(350)}")
         top.attributes("-topmost", True)
 
-        x, y, w, h = best_box
-        face_crop = self.current_frame[y:y+h, x:x+w]
+        face_crop = self.engine.extract_face(self.current_frame, best_box)
+        if face_crop is None:
+            messagebox.showwarning("Error", "Face too small or invalid.")
+            top.destroy()
+            return
+
         face_rgb = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
         pil_img = Image.fromarray(face_rgb)
         
@@ -300,7 +419,7 @@ class DetectorApp:
         def save_action():
             name = entry_name.get().strip()
             if not name: return
-            success, msg = self.engine.register_face(self.current_frame, best_box, name)
+            success, msg = self.engine.register_face(face_crop, name)
             if success:
                 self.log(msg)
                 self.update_face_count()
