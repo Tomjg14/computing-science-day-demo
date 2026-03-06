@@ -232,6 +232,11 @@ class DetectionEngine:
         aspect = self.glasses_img.shape[0] / self.glasses_img.shape[1]
         g_h = int(g_w * aspect)
 
+        # Prevent crash if eye distance is zero, fallback to simple overlay
+        if g_w <= 0 or g_h <= 0:
+            x, y, w, h = box
+            return self.overlay_glasses_simple(frame, x, y, w, h)
+
         glasses_rot = self.rotate_image(cv2.resize(self.glasses_img, (g_w, g_h)), -angle)
         
         center_x, center_y = (lx + rx) // 2, (ly + ry) // 2
@@ -341,7 +346,7 @@ class DetectionEngine:
 
         matched_names = set()
         # Process sorted faces
-        for face in faces_data:
+        for i, face in enumerate(faces_data):
             box = face['box']
             x, y, w, h = face['coords']
             kp = face['kpts']
@@ -371,7 +376,7 @@ class DetectionEngine:
                             self.face_track_history[track_id] = rec_name
                         label = f"{rec_name} {rec_conf:.0%}"
 
-            if patch_active:
+            if patch_active and i == 0:
                 kp_np = kp.cpu().numpy() if kp is not None else None
                 annotated = self.overlay_glasses_advanced(annotated, kp_np, (x,y,w,h))
                 label = f"Panda {conf:.0%}" 
