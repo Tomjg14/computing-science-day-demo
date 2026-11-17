@@ -46,3 +46,8 @@ Thumbs.db
 GLOSSARY.md
 GLOSSARY-MAP.md
 docs/adr/
+
+# --- Stage show ---
+# Leaderboard of the demo day (team names and scores only)
+leaderboard.json
+leaderboard.tmp
