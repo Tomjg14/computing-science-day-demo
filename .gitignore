@@ -41,3 +41,8 @@ Thumbs.db
 # If you want your custom glasses to be part of the repo, keep this commented out.
 # If 'glasses.png' is just for your local testing, uncomment the line below.
 # glasses.png
+# --- Design docs (local only) ---
+# Glossary and decision records from design sessions
+GLOSSARY.md
+GLOSSARY-MAP.md
+docs/adr/
