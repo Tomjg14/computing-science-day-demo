@@ -5,6 +5,8 @@
 An interactive computer vision show for secondary school students, made for the Computing Science Day of Radboud University.
 With a webcam and a big screen, it shows in four steps how a computer looks at images, how sure an AI is, and how you can fool an AI.
 
+> ✉️ **Questions, or stuck with the installation?** Feel free to email me: [tom.janssen-groesbeek@ru.nl](mailto:tom.janssen-groesbeek@ru.nl)
+
 > 🔬 **The research behind the demo:** in 2016, researchers made glasses with a special pattern that made a face recognition system think the wearer was someone else.
 > Read the paper: [Sharif et al. (2016), *Accessorize to a Crime*](https://doi.org/10.1145/2976749.2978392). More in [The research](#-the-research).
 

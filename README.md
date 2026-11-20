@@ -5,6 +5,8 @@
 Een interactieve show over computer vision voor scholieren, gemaakt voor de Computing Science Day van de Radboud Universiteit.
 Een webcam en een groot scherm laten in vier stappen zien hoe een computer naar beelden kijkt, hoe zeker een AI is, en hoe je een AI kunt foppen.
 
+> ✉️ **Vragen, of loop je vast bij de installatie?** Mail me gerust: [tom.janssen-groesbeek@ru.nl](mailto:tom.janssen-groesbeek@ru.nl)
+
 > 🔬 **Het onderzoek achter de demo:** onderzoekers maakten in 2016 een bril met een speciaal patroon die een gezichtsherkenner liet denken dat de drager iemand anders was.
 > Lees het artikel: [Sharif et al. (2016), *Accessorize to a Crime*](https://doi.org/10.1145/2976749.2978392). Meer in [Het onderzoek](#-het-onderzoek).
 
