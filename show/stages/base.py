@@ -42,15 +42,15 @@ class Stage:
         r.text(t(self.sub_key), 20, shadow=False, bold=False, midtop=(sw // 2, r.u(80)))
 
 
-def draw_faces(r, det, skip=(), labels=True):
-    """Grey thin box for passers-by, green labeled box for faces close to the screen."""
+def draw_faces(r, det, skip=(), scores=None):
+    """Grey thin box for passers-by, green labeled box for faces close to the screen.
+    scores: show the confidence in the label; None = follow the V toggle."""
+    if scores is None:
+        scores = config.SHOW_SCORES
     for f in det.faces:
         if id(f) in skip or f.conf < config.FACE_VISIBLE_CONF:
             continue
         if is_big(f, det.frame_w):
-            if labels:
-                r.labeled_box(f.box, f"{t('face')} {f.conf:.0%}", GREEN)
-            else:
-                r.labeled_box(f.box, "", GREEN)
+            r.labeled_box(f.box, f"{t('face')} {f.conf:.0%}" if scores else t("face"), GREEN)
         else:
             pygame.draw.rect(r.screen, GREY, r.rect(f.box), r.u(2), border_radius=r.u(6))

@@ -1,48 +1,30 @@
-# --- Python Basics ---
+# --- Python ---
 __pycache__/
 *.py[cod]
 *$py.class
 
-# --- Virtual Environments ---
-# Ignore the folder where you installed libraries
+# --- Virtual environments ---
 venv/
 env/
 .env
 .venv/
 
-# --- IDE Settings (Optional but recommended) ---
+# --- Editor settings ---
 .vscode/
 .idea/
 *.swp
 
-# --- Project Specifics ---
-# Ignore the output folder for video recordings
-recordings/
-known_faces/
-
-# --- Large AI Models ---
-# It is best practice NOT to commit large model weights to Git.
-# Download them via the code or use Git LFS if you must track them.
+# --- AI models (downloaded automatically at the first start) ---
 *.pt
 *.onnx
 *.engine
-
-# --- Ultralytics / YOLO Generated Folders ---
-# These folders are created automatically by YOLO during runs
 runs/
-yolov8n.pt
-yolov8n-face.pt
 
-# --- OS Generated Files ---
+# --- OS files ---
 .DS_Store
 Thumbs.db
 
-# --- Optional: Custom Patch ---
-# If you want your custom glasses to be part of the repo, keep this commented out.
-# If 'glasses.png' is just for your local testing, uncomment the line below.
-# glasses.png
-# --- Design docs (local only) ---
-# Glossary and decision records from design sessions
+# --- Design notes ---
 GLOSSARY.md
 GLOSSARY-MAP.md
 docs/adr/

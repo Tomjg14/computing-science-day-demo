@@ -1,7 +1,7 @@
-customtkinter
-opencv-python
+# Stage show (python -m show). Tested with Python 3.10 on Windows.
+ultralytics>=8.4      # YOLO26 models (face, objects, shapes); also installs PyTorch
+opencv-python         # camera and the classic Haar face detector
+pygame>=2.5           # show window and operator panel
+numpy
 pillow
 requests
-numpy
-ultralytics
-face_recognition

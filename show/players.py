@@ -1,4 +1,8 @@
-"""Players: people close to the screen, followed by their body so they stay known when the face disappears."""
+"""Players: people close to the screen, followed by their body so they stay known when the face disappears.
+
+The modern face model (YOLO) decides who joins. In stage 3 the active face detector decides
+whether a player's face is seen: YOLO in hard mode, the Haar cascade in easy mode.
+"""
 from . import config
 from .draw import PLAYER_COLORS
 
@@ -9,9 +13,11 @@ class Player:
         self.color = color
         self.body = None        # body box, or None when the body is not seen this frame
         self.face = None
+        self.haar_hits = 0      # Haar cascade hits on this player's face (easy mode)
         self.last_seen = 0.0
         self.streak = 0.0
-        self.won = False
+        self.won = False        # won at least once this round (counts for "N winners")
+        self.won_at = None      # time of the last win, for the short "won" text
 
     @property
     def face_conf(self):
@@ -19,11 +25,33 @@ class Player:
 
     @property
     def invisible(self):
-        return self.body is not None and self.face_conf < config.FACE_VISIBLE_CONF
+        if self.body is None:
+            return False
+        if config.EVASION_MODE == "easy":
+            return self.haar_hits < config.HAAR_MIN_HITS
+        return self.face_conf < config.FACE_VISIBLE_CONF
 
 
 def is_big(face, frame_w):
     return face.width / frame_w >= config.PLAYER_MIN_FACE
+
+
+def match_to_bodies(faces, bodies, strength):
+    """{body id: strongest face whose center lies in that body}. A face goes to the smallest
+    body box that contains its center."""
+    found = {}
+    for f in faces:
+        cx, cy = (f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2
+        best, best_area = None, None
+        for b in bodies.values():
+            x1, y1, x2, y2 = b.box
+            if x1 <= cx <= x2 and y1 <= cy <= y2:
+                area = (x2 - x1) * (y2 - y1)
+                if best is None or area < best_area:
+                    best, best_area = b.id, area
+        if best is not None and (best not in found or strength(f) > strength(found[best])):
+            found[best] = f
+    return found
 
 
 class PlayerTracker:
@@ -38,20 +66,8 @@ class PlayerTracker:
 
     def update(self, det, now):
         bodies = {b.id: b for b in det.persons if b.id is not None}
-
-        # match each face to the smallest body box that contains its center
-        body_face = {}
-        for f in det.faces:
-            cx, cy = (f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2
-            best, best_area = None, None
-            for b in bodies.values():
-                x1, y1, x2, y2 = b.box
-                if x1 <= cx <= x2 and y1 <= cy <= y2:
-                    area = (x2 - x1) * (y2 - y1)
-                    if best is None or area < best_area:
-                        best, best_area = b.id, area
-            if best is not None and (best not in body_face or f.conf > body_face[best].conf):
-                body_face[best] = f
+        body_face = match_to_bodies(det.faces, bodies, lambda f: f.conf)
+        body_haar = match_to_bodies(det.haar_faces or [], bodies, lambda h: h.hits)
 
         # a body becomes a player when its face is big and clearly seen
         for bid, f in body_face.items():
@@ -65,7 +81,8 @@ class PlayerTracker:
             b = bodies.get(bid)
             if b is not None:
                 p.body, p.face, p.last_seen = b.box, body_face.get(bid), now
+                p.haar_hits = body_haar[bid].hits if bid in body_haar else 0
             else:
-                p.body, p.face = None, None
+                p.body, p.face, p.haar_hits = None, None, 0
                 if now - p.last_seen > config.PLAYER_LOST_AFTER:
                     del self.players[bid]

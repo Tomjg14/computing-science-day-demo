@@ -23,6 +23,7 @@ SEG_CONF = 0.25
 # --- detection ---
 FACE_DETECT_CONF = 0.20      # lowest face confidence the model reports
 FACE_VISIBLE_CONF = 0.50     # (live) a face counts as seen above this
+SHOW_SCORES = True           # (live, V) face scores on screen; off = stage 3 shows them only during a round
 OBJECT_CONF = 0.45           # lowest object confidence the model reports
 OBJECT_MIN_FRAMES = 5        # an object must be seen this many frames in a row before it is shown
 CONF_SURE = 0.80             # stage 2 colors: green from here
@@ -38,6 +39,11 @@ FOOL_SEEN_MIN = 0.20         # "the AI sees now" shows guesses from this confide
 CONFUSE_ROUND_TIME = 30.0
 CONFUSE_MIN_CONF = 0.30      # the followed object needs at least this confidence
 CONFUSE_STABLE = 3           # a new label must hold this many detection updates to count
+CONFUSE_LOCK_IOU = 0.2       # lost tracker id: the object with this much box overlap is the same object
+CONFUSE_SKIP = {"tv", "couch", "chair", "bed", "dining table", "refrigerator", "oven", "sink",
+                "toilet", "potted plant", "bench", "microwave", "car", "bus", "truck", "train",
+                "airplane", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter"}
+                             # objects nobody holds up: never picked as the game 4 object
 HUNT_TARGETS = ["bottle", "cell phone", "backpack", "book", "cup", "handbag", "laptop",
                 "umbrella", "chair", "clock", "scissors", "toothbrush"]
 HUNT_ROUND_TIME = 45.0
@@ -65,11 +71,17 @@ PIXEL_GRID = 20              # cells per side in the final number grid
 ROUND_TIME = 20.0
 COUNTDOWN_TIME = 3.0
 RESULT_TIME = 5.0
-WIN_STREAK = 3.0             # seconds invisible in a row to win
+WIN_STREAK = 3.0             # seconds invisible in a row to win (again: a player can win more than once)
+WIN_SHOW_TIME = 3.0          # seconds the "won" text shows after each win
+EVASION_MODE = "hard"        # (live, M) "hard": modern face model (YOLO); "easy": classic Haar cascade (2001)
+HAAR_FILE = "haarcascade_frontalface_default.xml"  # ships with OpenCV
+HAAR_SCALE = 0.5             # the cascade runs on a smaller image: faster, close faces stay big enough
+HAAR_MIN_HITS = 6            # (live) easy mode: a face counts as seen from this many overlapping hits
+HAAR_HITS_FULL = 40          # hits that fill the bar on screen
 
 # --- stage 4: simulated attack ---
-GLASSES_FILE = ROOT / "glasses.png"
+GLASSES_FILE = ROOT / "assets" / "glasses.png"
 GLASSES_SCALE = 2.5          # glasses width relative to eye distance
 
 # --- overlays ---
-QR_FILE = ROOT / "images" / "qr-code.png"
+QR_FILE = ROOT / "assets" / "qr-code.png"

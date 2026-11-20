@@ -121,7 +121,6 @@ class OperatorPanel:
     # --- pages ---
     def _draw_control(self, x, w):
         app, s = self.app, self.surface
-        half = (w - 10) // 2
         card = pygame.Rect(x, 56, w, 132)
         pygame.draw.rect(s, CARD, card, border_radius=10)
         n = len(app.stages)
@@ -151,30 +150,47 @@ class OperatorPanel:
 
         if app.index == 1:  # stage 2: game choice
             y = self._draw_stage2_games(x, w, y)
+        if app.in_evasion():  # stage 3: which face model plays
+            easy = config.EVASION_MODE == "easy"
+            self._button((x, y, w, 36), "Mode: EASY (Haar cascade)" if easy else "Mode: HARD (YOLO)",
+                         key=pygame.K_m, color=BTN_ON if easy else BTN, hint="M")
+            y += 44
         holder = app.stage.game if app.index == 1 else app.stage
         if holder is not None and hasattr(holder, "instructions"):
             self._button((x, y, w, 36), "Hide instructions" if holder.instructions else "Show instructions",
                          key=pygame.K_i, color=BTN_ON if holder.instructions else BTN, hint="I")
             y += 44
+        if hasattr(app.stage, "explain"):  # stages 3 and 4
+            self._button((x, y, w, 36), "Hide explanation" if app.stage.explain else "Show explanation",
+                         key=pygame.K_e, color=BTN_ON if app.stage.explain else BTN, hint="E")
+            y += 44
 
         for row in ((("< Previous", pygame.K_LEFT, "LEFT"), ("Next >", pygame.K_RIGHT, "RIGHT")),
                     (("Attract mode", pygame.K_ESCAPE, "ESC"), ("Panda backup", pygame.K_p, "P")),
                     (("Language NL/EN", pygame.K_l, "L"), ("Next camera", pygame.K_c, "C")),
-                    (("Fullscreen", pygame.K_f, "F"), ("Debug overlay", pygame.K_d, "D"))):
+                    (("Fullscreen", pygame.K_f, "F"), ("Debug", pygame.K_d, "D"),
+                     ("Face scores", pygame.K_v, "V"))):
+            bw = (w - 10 * (len(row) - 1)) // len(row)
             for i, (label, key, hint) in enumerate(row):
-                color = BTN_ON if key == pygame.K_d and app.debug else BTN
-                self._button((x + i * (half + 10), y, half, 40), label, key=key, hint=hint, color=color)
+                on = (key == pygame.K_d and app.debug) or (key == pygame.K_v and config.SHOW_SCORES)
+                self._button((x + i * (bw + 10), y, bw, 40), label, key=key, hint=hint, color=BTN_ON if on else BTN)
             y += 48
 
         y += 8
         self._text("ROOM SETTINGS", self.f_small, DIM, (x, y))
         y += 22
-        for label, attr, step in (("Player face size", "PLAYER_MIN_FACE", 0.01),
-                                  ("Face visible limit", "FACE_VISIBLE_CONF", 0.05)):
+        if config.EVASION_MODE == "easy":
+            limit = ("Haar hits needed", f"{config.HAAR_MIN_HITS}")
+        else:
+            limit = ("Face visible limit", f"{config.FACE_VISIBLE_CONF:.2f}")
+        rows = (("Player face size", f"{config.PLAYER_MIN_FACE:.2f}",
+                 lambda: app.adjust("PLAYER_MIN_FACE", -0.01), lambda: app.adjust("PLAYER_MIN_FACE", 0.01)),
+                (*limit, lambda: app.adjust_face_limit(False), lambda: app.adjust_face_limit(True)))
+        for label, value, down, up in rows:
             self._text(label, self.f, WHITE, (x, y + 8))
-            self._text(f"{getattr(config, attr):.2f}", self.f_mono, YELLOW, (x + 200, y + 9))
-            self._button((x + w - 110, y, 50, 34), "-", action=lambda a=attr, d=-step: self.app.adjust(a, d))
-            self._button((x + w - 50, y, 50, 34), "+", action=lambda a=attr, d=step: self.app.adjust(a, d))
+            self._text(value, self.f_mono, YELLOW, (x + 200, y + 9))
+            self._button((x + w - 110, y, 50, 34), "-", action=down)
+            self._button((x + w - 50, y, 50, 34), "+", action=up)
             y += 42
 
     def _draw_stage2_games(self, x, w, y):
@@ -195,6 +211,11 @@ class OperatorPanel:
             if game.game_id == "fool":  # only Fool the AI has a target the operator can choose
                 self._text(f"Target: {object_name(game.target)}", self.f, YELLOW, (x, y + 9))
                 self._button((x + half + 10, y, half, 34), "Other target", key=pygame.K_t, hint="T")
+                y += 42
+            if game.game_id == "confuse" and game.phase in ("wait", "result"):
+                name = object_name(game.main.name) if game.main is not None else "-"
+                self._text(f"Object: {name}", self.f, YELLOW, (x, y + 9))
+                self._button((x + half + 10, y, half, 34), "Other object", key=pygame.K_t, hint="T")
                 y += 42
             if game.can_name():
                 self._button((x, y, w, 40), "Enter team name", key=pygame.K_n, color=(40, 140, 80), hint="N")
@@ -234,7 +255,7 @@ class OperatorPanel:
             for line in _wrap(text, self.f_small, w - 110):
                 self._text(line, self.f_small, WHITE, (x + 110, y))
                 y += 18
-            y += 7
+            y += 4
         self._text("All keys work in both windows.", self.f_small, GREEN, (x, y + 4))
 
 

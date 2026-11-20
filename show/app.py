@@ -30,7 +30,7 @@ from .vision import Camera, Segmenter, VisionEngine, VisionThread
 
 PANDA_INDEX = 3
 PANEL_FPS = 20
-LIMITS = {"PLAYER_MIN_FACE": (0.02, 0.30), "FACE_VISIBLE_CONF": (0.20, 0.90)}
+LIMITS = {"PLAYER_MIN_FACE": (0.02, 0.30), "FACE_VISIBLE_CONF": (0.20, 0.90), "HAAR_MIN_HITS": (2, 40)}
 
 
 def pick_show_display():
@@ -118,6 +118,23 @@ class App:
         lo, hi = LIMITS[attr]
         setattr(config, attr, round(min(hi, max(lo, getattr(config, attr) + delta)), 2))
 
+    def adjust_face_limit(self, up):
+        """The 'face seen' limit of the active stage 3 detector: Haar hits (easy) or YOLO score (hard)."""
+        if config.EVASION_MODE == "easy":
+            self.adjust("HAAR_MIN_HITS", 1 if up else -1)
+        else:
+            self.adjust("FACE_VISIBLE_CONF", 0.05 if up else -0.05)
+
+    def in_evasion(self):
+        return isinstance(self.stage, EvasionStage)
+
+    def toggle_evasion_mode(self):
+        config.EVASION_MODE = "hard" if config.EVASION_MODE == "easy" else "easy"
+        msg = t("mode_easy" if config.EVASION_MODE == "easy" else "mode_hard")
+        self.tell_operator(f"Stage 3 face model: {msg}")
+        if self.in_evasion():
+            self.show_toast(msg)
+
     def show_toast(self, msg):
         self.toast = (msg, self.now + 2.5)
 
@@ -194,10 +211,16 @@ class App:
         elif k == pygame.K_h:
             if self.panel:
                 self.panel.help = not self.panel.help
+        elif k == pygame.K_m:
+            self.toggle_evasion_mode()
+        elif k == pygame.K_v:
+            config.SHOW_SCORES = not config.SHOW_SCORES
+            self.tell_operator("Face scores on screen: " + ("ON" if config.SHOW_SCORES
+                                                            else "OFF (stage 3: only during a round)"))
         elif self.debug and k in (pygame.K_LEFTBRACKET, pygame.K_RIGHTBRACKET):
             self.adjust("PLAYER_MIN_FACE", 0.01 if k == pygame.K_RIGHTBRACKET else -0.01)
         elif self.debug and k in (pygame.K_MINUS, pygame.K_EQUALS):
-            self.adjust("FACE_VISIBLE_CONF", 0.05 if k == pygame.K_EQUALS else -0.05)
+            self.adjust_face_limit(k == pygame.K_EQUALS)
         else:
             self.stage.on_key(k, self)
 
@@ -227,6 +250,8 @@ class App:
             dt, t_prev = self.now - t_prev, self.now
             for ev in pygame.event.get():
                 self.handle_event(ev)
+            # the Haar cascade costs time, so it only runs where it plays
+            self.vision.engine.haar_on = self.in_evasion() and config.EVASION_MODE == "easy"
 
             seq, latest = self.vision.latest()
             if latest is None:
@@ -290,15 +315,16 @@ class App:
         if self.debug:
             lines = [
                 f"screen {self.clock.get_fps():5.1f}  camera {self.camera.fps:5.1f}  AI {self.vision.fps:5.1f} fps   "
-                f"face {det.face_ms:5.1f} ms   objects {det.object_ms:5.1f} ms",
-                f"stage {self.stage.name}   camera {self.camera.index}",
+                f"face {det.face_ms:5.1f} ms   objects {det.object_ms:5.1f} ms   haar {det.haar_ms:5.1f} ms",
+                f"stage {self.stage.name}   camera {self.camera.index}   stage 3 mode {config.EVASION_MODE}",
                 f"faces {len(det.faces)}  persons {len(det.persons)}  objects {len(det.objects)}"
                 f"  players {len(self.players.players)}",
-                f"[ ] player_min_face {config.PLAYER_MIN_FACE:.2f}   - = face_visible {config.FACE_VISIBLE_CONF:.2f}",
+                f"[ ] player_min_face {config.PLAYER_MIN_FACE:.2f}   - = face_visible {config.FACE_VISIBLE_CONF:.2f}"
+                f"  haar_min_hits {config.HAAR_MIN_HITS}",
             ]
             for p in self.players.players.values():
                 lines.append(f"  P{p.body_id}: body={'yes' if p.body else 'NO '} face={p.face_conf:.2f} "
-                             f"invisible={p.invisible!s:5} streak={p.streak:4.1f}")
+                             f"haar={p.haar_hits:2d} invisible={p.invisible!s:5} streak={p.streak:4.1f}")
             pad = pygame.Rect(r.u(10), sh - r.u(80) - r.u(22) * len(lines), r.u(700), r.u(22) * len(lines) + r.u(10))
             r.shade(pad, 200)
             for i, s in enumerate(lines):

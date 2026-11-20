@@ -1,4 +1,5 @@
 """Camera input and the two detection models (faces, and objects including persons)."""
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -6,9 +7,12 @@ from dataclasses import dataclass, field
 import cv2
 import numpy as np
 import requests
-from ultralytics import YOLO
+from ultralytics import YOLO, settings
 
 from . import config
+
+# Ultralytics sends anonymous usage statistics by default; the show sends nothing.
+settings.update({"sync": False})
 
 
 @dataclass
@@ -21,6 +25,12 @@ class Face:
     @property
     def width(self):
         return self.box[2] - self.box[0]
+
+
+@dataclass
+class HaarFace:
+    box: tuple               # x1, y1, x2, y2 in frame pixels
+    hits: int                # overlapping windows that passed every test of the cascade
 
 
 @dataclass
@@ -39,8 +49,10 @@ class Detections:
     objects: list = field(default_factory=list)   # everything except persons, above OBJECT_CONF
     all_objects: list = field(default_factory=list)  # also weak guesses (from OBJECT_MIN_CONF), for meters
     persons: list = field(default_factory=list)
+    haar_faces: list = None  # only filled while the Haar cascade runs (stage 3, easy mode)
     face_ms: float = 0.0
     object_ms: float = 0.0
+    haar_ms: float = 0.0
 
 
 def _model_path(name, url=None):
@@ -63,6 +75,18 @@ class VisionEngine:
         self.face_model = YOLO(_model_path(config.FACE_MODEL, config.FACE_MODEL_URL))
         self.object_model = YOLO(_model_path(config.OBJECT_MODEL))
         self.names = self.object_model.names
+        self.haar = cv2.CascadeClassifier(cv2.data.haarcascades + config.HAAR_FILE)
+        self.haar_on = False     # set by the show: run the Haar cascade too
+
+    def _haar_faces(self, frame):
+        """Classic face detector (Viola-Jones, 2001). A face is a cluster of overlapping windows
+        that pass all tests; the cluster size (hits) says how strongly the face is found."""
+        s = config.HAAR_SCALE
+        small = cv2.resize(frame, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+        gray = cv2.equalizeHist(cv2.cvtColor(small, cv2.COLOR_BGR2GRAY))
+        # minNeighbors=1 keeps every cluster of 2+ hits; the game applies its own limit
+        rects, hits = self.haar.detectMultiScale2(gray, scaleFactor=1.1, minNeighbors=1, minSize=(24, 24))
+        return [HaarFace((x / s, y / s, (x + w) / s, (y + h) / s), int(n)) for (x, y, w, h), n in zip(rects, hits)]
 
     def process(self, frame):
         h, w = frame.shape[:2]
@@ -84,8 +108,11 @@ class VisionEngine:
             if conf >= config.OBJECT_CONF:
                 (det.persons if o.name == "person" else det.objects).append(o)
         t2 = time.time()
+        if self.haar_on:
+            det.haar_faces = self._haar_faces(frame)
+        t3 = time.time()
 
-        det.face_ms, det.object_ms = (t1 - t0) * 1000, (t2 - t1) * 1000
+        det.face_ms, det.object_ms, det.haar_ms = (t1 - t0) * 1000, (t2 - t1) * 1000, (t3 - t2) * 1000
         return det
 
 
@@ -119,7 +146,9 @@ class Camera:
 
     @staticmethod
     def _open(index):
-        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        # DirectShow opens USB webcams fast on Windows; other systems choose their own backend
+        backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
+        cap = cv2.VideoCapture(index, backend)
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # 30 fps on most USB webcams
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.FRAME_W)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.FRAME_H)

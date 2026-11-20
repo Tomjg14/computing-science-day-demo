@@ -67,7 +67,10 @@ class DetectStage(Stage):
             return
         for f in det.faces:
             if f.conf >= config.FACE_VISIBLE_CONF and is_big(f, det.frame_w):
-                r.labeled_box(f.box, f"{t('face')} {f.conf:.0%}", conf_color(f.conf))
+                if config.SHOW_SCORES:  # the color also tells the score, so both go together
+                    r.labeled_box(f.box, f"{t('face')} {f.conf:.0%}", conf_color(f.conf))
+                else:
+                    r.labeled_box(f.box, t("face"), GREEN)
         for o in self.stable:
             r.labeled_box(o.box, f"{object_name(o.name)} {o.conf:.0%}", conf_color(o.conf), size=24)
 

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="nl" data-ui="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kun jij de AI foppen?</title>
+<meta name="description" content="Interactieve computer-vision-show van de Radboud Universiteit: zo ziet een computer, en zo fop je een AI. Met uitleg om de show zelf op te zetten.">
+<style>
+  :root {
+    --bg: #f7f6f2; --card: #ffffff; --text: #1d1f24; --muted: #5b6070; --line: #e3e1da;
+    --accent: #c8102e; --accent-soft: #fbe9ec; --code: #f0eee8; --link: #0b5cad;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171c; --card: #1e2128; --text: #e9eaee; --muted: #a3a8b6; --line: #2e323b;
+      --accent: #ff5a6e; --accent-soft: #3a1f25; --code: #262a32; --link: #7cb7ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--link); }
+  header { border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; z-index: 2; }
+  .bar { max-width: 900px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 12px; align-items: center; }
+  .bar strong { flex: 1; }
+  .bar nav { display: flex; gap: 14px; font-size: 15px; }
+  .bar nav a { text-decoration: none; }
+  #lang { border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 999px;
+          padding: 6px 14px; font: inherit; font-size: 15px; cursor: pointer; white-space: nowrap; }
+  main { max-width: 900px; margin: 0 auto; padding: 0 16px 60px; }
+  h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.15; margin: 40px 0 10px; }
+  h2 { margin: 48px 0 12px; font-size: 26px; }
+  h3 { margin: 26px 0 8px; font-size: 20px; }
+  .lead { font-size: 19px; color: var(--muted); max-width: 46em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 14px 0; }
+  .research { border: 2px solid var(--accent); background: var(--accent-soft); }
+  .research h2 { margin-top: 0; }
+  .note { border-left: 4px solid var(--accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .grid .card { margin: 0; }
+  .step { font-weight: 700; color: var(--accent); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+  pre { background: var(--code); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 15px; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
+  :not(pre) > code { background: var(--code); padding: 1px 5px; border-radius: 5px; }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .table-wrap { overflow-x: auto; }
+  kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px;
+        background: var(--card); font-family: inherit; font-size: .9em; white-space: nowrap; }
+  ol li, ul li { margin: 4px 0; }
+  .refs li { margin: 10px 0; }
+  footer { color: var(--muted); font-size: 15px; border-top: 1px solid var(--line); padding-top: 18px; margin-top: 50px; }
+  /* language switch: show only the blocks of the chosen language */
+  html[data-ui="nl"] [data-l="en"], html[data-ui="en"] [data-l="nl"] { display: none !important; }
+  @media (max-width: 600px) { .bar nav { display: none; } body { font-size: 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <strong>🕶️ <span data-l="nl">Kun jij de AI foppen?</span><span data-l="en">Can you fool the AI?</span></strong>
+    <nav>
+      <a href="#show"><span data-l="nl">De show</span><span data-l="en">The show</span></a>
+      <a href="#installatie"><span data-l="nl">Zelf opzetten</span><span data-l="en">Set it up</span></a>
+      <a href="#onderzoek"><span data-l="nl">Onderzoek</span><span data-l="en">Research</span></a>
+    </nav>
+    <button id="lang" type="button" aria-label="Switch language / Wissel van taal">🇬🇧 English</button>
+  </div>
+</header>
+
+<main>
+  <h1><span data-l="nl">Kun jij de AI foppen?</span><span data-l="en">Can you fool the AI?</span></h1>
+  <p class="lead" data-l="nl">Een interactieve show over computer vision voor scholieren, gemaakt voor de Computing Science Day van de Radboud Universiteit. Met een webcam en een groot scherm zie je in vier stappen hoe een computer naar beelden kijkt, hoe zeker een AI is, en hoe je een AI kunt foppen.</p>
+  <p class="lead" data-l="en">An interactive computer vision show for secondary school students, made for the Computing Science Day of Radboud University. With a webcam and a big screen, you see in four steps how a computer looks at images, how sure an AI is, and how you can fool an AI.</p>
+  <p>
+    <a href="https://github.com/Tomjg14/computing-science-day-demo"><span data-l="nl">Code op GitHub</span><span data-l="en">Code on GitHub</span></a>
+    · <a href="#installatie"><span data-l="nl">Zelf opzetten</span><span data-l="en">Set it up yourself</span></a>
+  </p>
+
+  <section class="card research" id="onderzoek-kort">
+    <h2>🔬 <span data-l="nl">Het onderzoek achter de demo</span><span data-l="en">The research behind the demo</span></h2>
+    <p data-l="nl">In 2016 maakten onderzoekers een bril met een berekend patroon. Een gezichtsherkenner herkende de drager daardoor niet meer, of zag de drager zelfs als iemand anders. Stap 4 van de show is op dit werk gebaseerd.</p>
+    <p data-l="en">In 2016, researchers made glasses with a computed pattern. Because of it, a face recognition system no longer recognized the wearer, or even saw the wearer as someone else. Step 4 of the show is based on this work.</p>
+    <ul class="refs">
+      <li>M. Sharif, S. Bhagavatula, L. Bauer, M. K. Reiter (2016). <em>Accessorize to a Crime: Real and Stealthy Attacks on State-of-the-Art Face Recognition.</em> ACM CCS 2016.
+        <a href="https://doi.org/10.1145/2976749.2978392">doi.org/10.1145/2976749.2978392</a></li>
+      <li>M. Sharif, S. Bhagavatula, L. Bauer, M. K. Reiter (2019). <em>A General Framework for Adversarial Examples with Objectives.</em> ACM Transactions on Privacy and Security.
+        <a href="https://doi.org/10.1145/3317611">doi.org/10.1145/3317611</a> ·
+        <span data-l="nl">gratis versie:</span><span data-l="en">free version:</span> <a href="https://arxiv.org/abs/1801.00349">arXiv:1801.00349</a></li>
+    </ul>
+    <p><a href="#onderzoek"><span data-l="nl">Hoe werkt zo'n bril? →</span><span data-l="en">How do such glasses work? →</span></a></p>
+  </section>
+
+  <h2 id="show">🎬 <span data-l="nl">Wat zit er in de show?</span><span data-l="en">What is in the show?</span></h2>
+  <div class="grid">
+    <div class="card">
+      <div class="step"><span data-l="nl">Stap 1</span><span data-l="en">Step 1</span></div>
+      <h3><span data-l="nl">Wat ziet de computer?</span><span data-l="en">What does the computer see?</span></h3>
+      <p data-l="nl">Een foto van je gezicht wordt pixels, en elke pixel wordt drie getallen: rood, groen en blauw.</p>
+      <p data-l="en">A photo of your face turns into pixels, and every pixel turns into three numbers: red, green and blue.</p>
+    </div>
+    <div class="card">
+      <div class="step"><span data-l="nl">Stap 2</span><span data-l="en">Step 2</span></div>
+      <h3><span data-l="nl">Hoe zeker is de computer?</span><span data-l="en">How sure is the computer?</span></h3>
+      <p data-l="nl">Gezichten en voorwerpen met een zekerheidsscore, en vier spellen: <em>Bedrieg de AI!</em>, <em>Wat denkt de AI?</em>, <em>Speurtocht</em> en <em>Verwarringsmeter</em>.</p>
+      <p data-l="en">Faces and objects with a confidence score, and four games: <em>Fool the AI!</em>, <em>What does the AI think?</em>, <em>Scavenger hunt</em> and <em>Confusion meter</em>.</p>
+    </div>
+    <div class="card">
+      <div class="step"><span data-l="nl">Stap 3</span><span data-l="en">Step 3</span></div>
+      <h3><span data-l="nl">Verstop je voor de AI!</span><span data-l="en">Hide from the AI!</span></h3>
+      <p data-l="nl">De AI ziet je lichaam, maar niet je gezicht? Dan ben je onzichtbaar. Makkelijk (oude AI uit 2001) of moeilijk (moderne AI).</p>
+      <p data-l="en">The AI sees your body but not your face? Then you are invisible. Easy (old AI from 2001) or hard (modern AI).</p>
+    </div>
+    <div class="card">
+      <div class="step"><span data-l="nl">Stap 4</span><span data-l="en">Step 4</span></div>
+      <h3><span data-l="nl">Zo doen onderzoekers het</span><span data-l="en">How researchers do it</span></h3>
+      <p data-l="nl">Een <strong>simulatie</strong> van de bril uit het onderzoek, met uitleg hoe zo'n bril gemaakt wordt.</p>
+      <p data-l="en">A <strong>simulation</strong> of the glasses from the research, with an explanation of how such glasses are made.</p>
+    </div>
+  </div>
+
+  <h2 id="nodig">🧰 <span data-l="nl">Wat heb je nodig?</span><span data-l="en">What do you need?</span></h2>
+  <ul data-l="nl">
+    <li><strong>Een computer</strong> met Windows, macOS of Linux. Getest op Windows; macOS en Linux zouden moeten werken, maar zijn niet getest. Een NVIDIA-videokaart maakt de show vlotter, maar is niet nodig.</li>
+    <li><strong>Een webcam.</strong> De ingebouwde webcam van een laptop werkt. Een losse USB-webcam boven op een groot scherm werkt het best.</li>
+    <li><strong>Eén of twee schermen.</strong> Eén laptopscherm is genoeg. Met een tweede scherm (tv, monitor of beamer) ziet het publiek de show groot.</li>
+    <li><strong>Internet bij de eerste start</strong>, om de AI-modellen te downloaden (ongeveer 60 MB). Daarna werkt de show zonder internet.</li>
+  </ul>
+  <ul data-l="en">
+    <li><strong>A computer</strong> with Windows, macOS or Linux. Tested on Windows; macOS and Linux should work, but are not tested. An NVIDIA graphics card makes the show smoother, but it is not necessary.</li>
+    <li><strong>A webcam.</strong> The built-in webcam of a laptop works. A separate USB webcam on top of a big screen works best.</li>
+    <li><strong>One or two screens.</strong> One laptop screen is enough. With a second screen (TV, monitor or projector), the audience sees the show big.</li>
+    <li><strong>Internet at the first start</strong>, to download the AI models (about 60 MB). After that, the show works without internet.</li>
+  </ul>
+
+  <h2 id="installatie">🛠️ <span data-l="nl">Installatie (eenmalig)</span><span data-l="en">Installation (once)</span></h2>
+  <h3>1. <span data-l="nl">Installeer de hulpprogramma's</span><span data-l="en">Install the tools</span></h3>
+  <ul data-l="nl">
+    <li><strong>Miniconda</strong>: Python met aparte "omgevingen", zodat deze demo niets van je andere software verandert. Download via <a href="https://docs.anaconda.com/miniconda/install/">docs.anaconda.com/miniconda</a> en installeer met de standaardinstellingen.</li>
+    <li><strong>Git</strong> (optioneel): <a href="https://git-scm.com/downloads">git-scm.com/downloads</a>. Zonder Git: klik op GitHub op <strong>Code → Download ZIP</strong> en pak het bestand uit.</li>
+  </ul>
+  <ul data-l="en">
+    <li><strong>Miniconda</strong>: Python with separate "environments", so this demo changes nothing in your other software. Download it from <a href="https://docs.anaconda.com/miniconda/install/">docs.anaconda.com/miniconda</a> and install it with the default settings.</li>
+    <li><strong>Git</strong> (optional): <a href="https://git-scm.com/downloads">git-scm.com/downloads</a>. Without Git: on GitHub, click <strong>Code → Download ZIP</strong> and unzip the file.</li>
+  </ul>
+  <h3>2. <span data-l="nl">Download de code</span><span data-l="en">Download the code</span></h3>
+  <p data-l="nl">Open een terminal. Op Windows: zoek in het Startmenu naar <strong>Anaconda Prompt</strong>.</p>
+  <p data-l="en">Open a terminal. On Windows: search the Start menu for <strong>Anaconda Prompt</strong>.</p>
+  <pre><code>git clone https://github.com/Tomjg14/computing-science-day-demo.git
+cd computing-science-day-demo</code></pre>
+  <h3>3. <span data-l="nl">Maak een omgeving en installeer de onderdelen</span><span data-l="en">Make an environment and install the parts</span></h3>
+  <pre><code>conda create -n demo_day python=3.10
+conda activate demo_day
+pip install -r requirements.txt</code></pre>
+  <p class="card note" data-l="nl"><strong>NVIDIA-videokaart?</strong> Installeer eerst PyTorch met GPU-ondersteuning via <a href="https://pytorch.org/get-started/locally/">pytorch.org</a>, en daarna <code>pip install -r requirements.txt</code>. Zonder deze stap werkt de show ook, maar langzamer.</p>
+  <p class="card note" data-l="en"><strong>NVIDIA graphics card?</strong> First install PyTorch with GPU support from <a href="https://pytorch.org/get-started/locally/">pytorch.org</a>, then <code>pip install -r requirements.txt</code>. Without this step the show also works, but slower.</p>
+
+  <h2 id="starten">▶️ <span data-l="nl">De show starten</span><span data-l="en">Start the show</span></h2>
+  <pre><code>conda activate demo_day
+python -m show</code></pre>
+  <p data-l="nl">De eerste keer downloadt de show de modellen. Daarna verschijnen twee vensters: <strong>de show</strong> en het <strong>bedieningspaneel</strong>. Verkeerde camera? Start met <code>python -m show 1</code>, of druk op <kbd>C</kbd>.</p>
+  <p data-l="en">The first time, the show downloads the models. Then two windows appear: <strong>the show</strong> and the <strong>operator panel</strong>. Wrong camera? Start with <code>python -m show 1</code>, or press <kbd>C</kbd>.</p>
+
+  <h2 id="opstelling">🖥️ <span data-l="nl">Opstelling thuis of in de klas</span><span data-l="en">Setup at home or in the classroom</span></h2>
+  <div class="grid">
+    <div class="card">
+      <h3><span data-l="nl">Eén scherm</span><span data-l="en">One screen</span></h3>
+      <ol data-l="nl">
+        <li>Start de show: show en paneel staan naast elkaar.</li>
+        <li>Bedien de show met de toetsen; die werken in beide vensters.</li>
+        <li><kbd>F</kbd> = volledig scherm. Het paneel zit dan achter de show; de toetsen blijven werken.</li>
+      </ol>
+      <ol data-l="en">
+        <li>Start the show: the show and the panel are next to each other.</li>
+        <li>Control the show with the keys; they work in both windows.</li>
+        <li><kbd>F</kbd> = full screen. The panel is then behind the show; the keys still work.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3><span data-l="nl">Twee schermen</span><span data-l="en">Two screens</span></h3>
+      <ol data-l="nl">
+        <li>Zet het tweede scherm op <strong>uitbreiden</strong> (Windows: <kbd>Win</kbd> + <kbd>P</kbd> → Uitbreiden).</li>
+        <li>Start de show: die gaat vanzelf volledig scherm op het grootste andere scherm. Het paneel blijft op je laptop.</li>
+        <li>Verkeerd scherm? Zet <code>SHOW_DISPLAY</code> en <code>PANEL_DISPLAY</code> in <code>show/config.py</code>.</li>
+      </ol>
+      <ol data-l="en">
+        <li>Set the second screen to <strong>extend</strong> (Windows: <kbd>Win</kbd> + <kbd>P</kbd> → Extend).</li>
+        <li>Start the show: it goes full screen on the largest other screen by itself. The panel stays on your laptop.</li>
+        <li>Wrong screen? Set <code>SHOW_DISPLAY</code> and <code>PANEL_DISPLAY</code> in <code>show/config.py</code>.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Webcam</h3>
+      <ul data-l="nl">
+        <li><strong>Ingebouwd:</strong> werkt direct (camera 0).</li>
+        <li><strong>Losse USB-webcam:</strong> boven of onder het grote scherm, gericht op het publiek; start met <code>python -m show 1</code>.</li>
+        <li><strong>Licht</strong> op de gezichten, niet erachter.</li>
+        <li><strong>macOS:</strong> geef de Terminal toegang tot de camera (Privacy en beveiliging → Camera).</li>
+      </ul>
+      <ul data-l="en">
+        <li><strong>Built-in:</strong> works directly (camera 0).</li>
+        <li><strong>Separate USB webcam:</strong> above or below the big screen, aimed at the audience; start with <code>python -m show 1</code>.</li>
+        <li><strong>Light</strong> on the faces, not behind them.</li>
+        <li><strong>macOS:</strong> give the Terminal access to the camera (Privacy &amp; Security → Camera).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 id="toetsen">🎮 <span data-l="nl">Tijdens de show</span><span data-l="en">During the show</span></h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th><span data-l="nl">Toets</span><span data-l="en">Key</span></th><th><span data-l="nl">Wat doet het?</span><span data-l="en">What does it do?</span></th></tr>
+    <tr><td><kbd>SPACE</kbd></td><td><span data-l="nl">Start de sessie, of de actie van de stap (foto, ronde).</span><span data-l="en">Start the session, or the action of the step (photo, round).</span></td></tr>
+    <tr><td><kbd>→</kbd> <kbd>←</kbd></td><td><span data-l="nl">Volgende / vorige stap.</span><span data-l="en">Next / previous step.</span></td></tr>
+    <tr><td><kbd>ESC</kbd></td><td><span data-l="nl">Terug naar het wachtscherm.</span><span data-l="en">Back to the attract screen.</span></td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>4</kbd> <kbd>0</kbd></td><td><span data-l="nl">Stap 2: kies een spel / vrij kijken.</span><span data-l="en">Step 2: choose a game / free detection.</span></td></tr>
+    <tr><td><kbd>I</kbd></td><td><span data-l="nl">Uitleg "hoe speel je het" aan / uit.</span><span data-l="en">"How to play" card on / off.</span></td></tr>
+    <tr><td><kbd>E</kbd></td><td><span data-l="nl">Stap 3 en 4: extra uitleg aan / uit.</span><span data-l="en">Steps 3 and 4: extra explanation on / off.</span></td></tr>
+    <tr><td><kbd>M</kbd></td><td><span data-l="nl">Stap 3: makkelijk (oude AI) / moeilijk (moderne AI).</span><span data-l="en">Step 3: easy (old AI) / hard (modern AI).</span></td></tr>
+    <tr><td><kbd>V</kbd></td><td><span data-l="nl">Scores op gezichten aan / uit.</span><span data-l="en">Scores on faces on / off.</span></td></tr>
+    <tr><td><kbd>T</kbd></td><td><span data-l="nl">Stap 2: ander doel of ander voorwerp.</span><span data-l="en">Step 2: other target or other object.</span></td></tr>
+    <tr><td><kbd>P</kbd></td><td><span data-l="nl">Direct naar stap 4.</span><span data-l="en">Jump to step 4.</span></td></tr>
+    <tr><td><kbd>L</kbd></td><td><span data-l="nl">Taal van het scherm: Nederlands / Engels.</span><span data-l="en">Screen language: Dutch / English.</span></td></tr>
+    <tr><td><kbd>C</kbd> / <kbd>F</kbd></td><td><span data-l="nl">Volgende camera / volledig scherm.</span><span data-l="en">Next camera / full screen.</span></td></tr>
+    <tr><td><kbd>H</kbd></td><td><span data-l="nl">Alle toetsen in het bedieningspaneel.</span><span data-l="en">All keys in the operator panel.</span></td></tr>
+    <tr><td><kbd>Q</kbd> 2×</td><td><span data-l="nl">Show afsluiten.</span><span data-l="en">Close the show.</span></td></tr>
+  </table>
+  </div>
+
+  <h2 id="privacy">🔒 Privacy</h2>
+  <ul data-l="nl">
+    <li>De AI rekent op je eigen computer: de camerabeelden gaan niet naar internet.</li>
+    <li>De show zet de anonieme gebruiksstatistieken van Ultralytics uit.</li>
+    <li>De show slaat <strong>geen foto's of video's</strong> op. De foto in stap 1 staat alleen in het geheugen.</li>
+    <li>Het scorebord bewaart alleen teamnamen en scores.</li>
+  </ul>
+  <ul data-l="en">
+    <li>The AI runs on your own computer: the camera images do not go to the internet.</li>
+    <li>The show turns off the anonymous usage statistics of Ultralytics.</li>
+    <li>The show stores <strong>no photos or videos</strong>. The photo in step 1 exists only in memory.</li>
+    <li>The leaderboard keeps only team names and scores.</li>
+  </ul>
+
+  <h2 id="onderzoek">🔬 <span data-l="nl">Het onderzoek</span><span data-l="en">The research</span></h2>
+  <h3><span data-l="nl">De bril die een AI fopt (stap 4)</span><span data-l="en">Glasses that fool an AI (step 4)</span></h3>
+  <p data-l="nl">Mahmood Sharif, Sruti Bhagavatula, Lujo Bauer en Michael K. Reiter lieten zien dat een bril met een berekend patroon een gezichtsherkenner kan foppen. Zo werkt het, in het kort:</p>
+  <p data-l="en">Mahmood Sharif, Sruti Bhagavatula, Lujo Bauer and Michael K. Reiter showed that glasses with a computed pattern can fool a face recognition system. This is how it works, in short:</p>
+  <ol data-l="nl">
+    <li>Voor de AI is een gezicht getallen. Hij geeft elk mogelijk antwoord een score.</li>
+    <li>De onderzoekers veranderen alleen de pixels van het brilmontuur.</li>
+    <li>De rekenregels in de AI vertellen welke verandering de score van het foute antwoord verhoogt. Dat herhalen ze heel vaak.</li>
+    <li>Ze maken het patroon glad en printbaar, printen de bril en zetten hem op: de aanval werkt ook in het echt.</li>
+  </ol>
+  <ol data-l="en">
+    <li>To the AI, a face is numbers. It gives each possible answer a score.</li>
+    <li>The researchers change only the pixels of the glasses frame.</li>
+    <li>The math inside the AI tells them which change makes the wrong answer score higher. They repeat this very often.</li>
+    <li>They make the pattern smooth and printable, print the glasses and put them on: the attack also works in real life.</li>
+  </ol>
+  <p class="card note" data-l="nl"><strong>Let op:</strong> de bril in stap 4 is een <strong>simulatie</strong>. De bril wordt alleen op het scherm getekend; het AI-model ziet hem niet, en het label "Panda" staat vast. Het scherm zegt dat ook.</p>
+  <p class="card note" data-l="en"><strong>Note:</strong> the glasses in step 4 are a <strong>simulation</strong>. They are only drawn on the screen; the AI model does not see them, and the "Panda" label is fixed. The screen says so too.</p>
+
+  <h3><span data-l="nl">De twee gezichtsdetectoren (stap 3)</span><span data-l="en">The two face detectors (step 3)</span></h3>
+  <ul data-l="nl">
+    <li><strong>Oude AI: Haar-cascade</strong> (Viola &amp; Jones, 2001). Een vaste reeks licht/donker-testen op een grijs beeld, zoals "zijn de ogen donkerder dan de wangen?". Het model in OpenCV heeft 25 controles na elkaar; zakt een venster voor één controle, dan is er geen gezicht.</li>
+    <li><strong>Moderne AI: YOLO</strong> (neuraal netwerk). Bekijkt het hele beeld in één keer en leerde zijn kenmerken zelf uit heel veel voorbeeldfoto's. Bedek je één deel, dan verraden andere delen je nog.</li>
+  </ul>
+  <ul data-l="en">
+    <li><strong>Old AI: Haar cascade</strong> (Viola &amp; Jones, 2001). A fixed series of light/dark tests on a gray image, such as "are the eyes darker than the cheeks?". The model in OpenCV has 25 checks in a row; if a window fails one check, there is no face.</li>
+    <li><strong>Modern AI: YOLO</strong> (neural network). Looks at the whole image in one go and learned its own clues from very many example photos. Cover one part, and other parts can still give you away.</li>
+  </ul>
+
+  <h3>📄 <span data-l="nl">Artikelen</span><span data-l="en">Papers</span></h3>
+  <ul class="refs">
+    <li>M. Sharif, S. Bhagavatula, L. Bauer, M. K. Reiter (2016). <em>Accessorize to a Crime: Real and Stealthy Attacks on State-of-the-Art Face Recognition.</em> ACM CCS 2016. <a href="https://doi.org/10.1145/2976749.2978392">doi.org/10.1145/2976749.2978392</a></li>
+    <li>M. Sharif, S. Bhagavatula, L. Bauer, M. K. Reiter (2019). <em>A General Framework for Adversarial Examples with Objectives.</em> ACM Transactions on Privacy and Security. <a href="https://doi.org/10.1145/3317611">doi.org/10.1145/3317611</a> · <a href="https://arxiv.org/abs/1801.00349">arXiv:1801.00349</a></li>
+    <li>P. Viola, M. Jones (2001). <em>Rapid Object Detection using a Boosted Cascade of Simple Features.</em> CVPR 2001. <a href="https://doi.org/10.1109/CVPR.2001.990517">doi.org/10.1109/CVPR.2001.990517</a></li>
+    <li>J. Redmon, S. Divvala, R. Girshick, A. Farhadi (2016). <em>You Only Look Once: Unified, Real-Time Object Detection.</em> CVPR 2016. <a href="https://arxiv.org/abs/1506.02640">arXiv:1506.02640</a></li>
+  </ul>
+  <p data-l="nl">De show gebruikt de YOLO26-modellen van <a href="https://docs.ultralytics.com/">Ultralytics</a> en het gezichtsmodel van <a href="https://github.com/akanametov/yolo-face">yolo-face</a>.</p>
+  <p data-l="en">The show uses the YOLO26 models of <a href="https://docs.ultralytics.com/">Ultralytics</a> and the face model of <a href="https://github.com/akanametov/yolo-face">yolo-face</a>.</p>
+
+  <h2 id="problemen">🩺 <span data-l="nl">Problemen oplossen</span><span data-l="en">Troubleshooting</span></h2>
+  <div class="table-wrap">
+  <table>
+    <tr><td><em>"No working camera found"</em></td><td><span data-l="nl">Sluit programma's die de camera gebruiken (Teams, Zoom). Probeer <code>python -m show 1</code>. macOS: geef de Terminal toegang tot de camera.</span><span data-l="en">Close programs that use the camera (Teams, Zoom). Try <code>python -m show 1</code>. macOS: give the Terminal access to the camera.</span></td></tr>
+    <tr><td><span data-l="nl">De show is traag</span><span data-l="en">The show is slow</span></td><td><span data-l="nl">Kijk in het paneel bij <em>Speed</em>. Sluit andere programma's. NVIDIA: installeer PyTorch met GPU-ondersteuning.</span><span data-l="en">Look at <em>Speed</em> in the panel. Close other programs. NVIDIA: install PyTorch with GPU support.</span></td></tr>
+    <tr><td><span data-l="nl">Het paneel is weg</span><span data-l="en">The panel is gone</span></td><td><span data-l="nl">Het zit achter de show. Druk op <kbd>F</kbd>, of gebruik de toetsen.</span><span data-l="en">It is behind the show. Press <kbd>F</kbd>, or use the keys.</span></td></tr>
+    <tr><td><span data-l="nl">Download mislukt</span><span data-l="en">Download fails</span></td><td><span data-l="nl">Controleer het internet en start opnieuw.</span><span data-l="en">Check the internet connection and start again.</span></td></tr>
+  </table>
+  </div>
+
+  <footer>
+    <p data-l="nl">Vorige versie van de demo: tag <a href="https://github.com/Tomjg14/computing-science-day-demo/tree/v1-oude-demo"><code>v1-oude-demo</code></a>. Vragen? Mail naar <a href="mailto:tom.janssen-groesbeek@ru.nl">tom.janssen-groesbeek@ru.nl</a>.</p>
+    <p data-l="en">Previous version of the demo: tag <a href="https://github.com/Tomjg14/computing-science-day-demo/tree/v1-oude-demo"><code>v1-oude-demo</code></a>. Questions? Send an email to <a href="mailto:tom.janssen-groesbeek@ru.nl">tom.janssen-groesbeek@ru.nl</a>.</p>
+  </footer>
+</main>
+
+<script>
+  // Language: ?lang=en in the link wins, then the last choice of this browser, else Dutch.
+  (function () {
+    var root = document.documentElement, btn = document.getElementById("lang");
+    var titles = { nl: "Kun jij de AI foppen?", en: "Can you fool the AI?" };
+    function store(v) { try { localStorage.setItem("lang", v); } catch (e) {} }
+    function stored() { try { return localStorage.getItem("lang"); } catch (e) { return null; } }
+    function set(l, remember) {
+      root.setAttribute("data-ui", l);
+      root.setAttribute("lang", l);
+      document.title = titles[l];
+      btn.textContent = l === "nl" ? "🇬🇧 English" : "🇳🇱 Nederlands";
+      if (remember) {
+        store(l);
+        var url = new URL(location.href);
+        url.searchParams.set("lang", l);
+        history.replaceState(null, "", url);
+      }
+    }
+    var q = new URLSearchParams(location.search).get("lang");
+    set(q === "en" || q === "nl" ? q : (stored() === "en" ? "en" : "nl"), false);
+    btn.addEventListener("click", function () {
+      set(root.getAttribute("data-ui") === "nl" ? "en" : "nl", true);
+    });
+  })();
+</script>
+</body>
+</html>
