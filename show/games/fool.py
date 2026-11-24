@@ -2,9 +2,11 @@
 
 A live meter shows how sure the AI is that it sees the target; the best value of the
 round is the team score. A real object is allowed too: the AI decides, not us.
-"""
-import random
 
+The target starts at the first item of config.FOOL_TARGETS (banana). The operator steps
+through the list in a fixed order: T next, Shift+T previous, or the panel buttons. The choice
+stays when the operator leaves the game and comes back, until the show restarts.
+"""
 import pygame
 
 from .. import config
@@ -17,21 +19,26 @@ class FoolGame(RoundGame):
     game_id = "fool"
     name_key = "fool_name"
     label = "Fool the AI"
+    chosen = 0                    # index in config.FOOL_TARGETS; shared, so it stays between games
 
     def __init__(self, app=None):
         super().__init__(app)
         self.round_time = config.FOOL_ROUND_TIME
-        self.target = random.choice(config.FOOL_TARGETS)
+        self.target = config.FOOL_TARGETS[FoolGame.chosen % len(config.FOOL_TARGETS)]
         self.current = self.best = 0.0
         self.target_box = None
         self.now_seen = None          # (english name, conf) of the strongest object right now
 
-    def next_target(self):
-        self.target = random.choice([x for x in config.FOOL_TARGETS if x != self.target])
+    def step_target(self, step):
+        """Next (+1) or previous (-1) target in the fixed list; only between rounds."""
+        if self.phase not in ("wait", "result"):
+            return
+        FoolGame.chosen = (FoolGame.chosen + step) % len(config.FOOL_TARGETS)
+        self.target = config.FOOL_TARGETS[FoolGame.chosen]
 
     def extra_key(self, key, app):
         if key == pygame.K_t and self.phase in ("wait", "result"):
-            self.next_target()
+            self.step_target(-1 if pygame.key.get_mods() & pygame.KMOD_SHIFT else 1)
             return True
         return False
 

@@ -167,10 +167,11 @@ class EvasionStage(Stage):
         for pt in self.particles:
             pygame.draw.rect(r.screen, pt[4], (int(pt[0]), int(pt[1]), r.u(10), r.u(14)))
 
-        r.banner(sh - r.u(56), r.u(56))
-        r.text(t("invisible_today", n=app.stats["invisible"]), 26, YELLOW, center=(sw // 2, sh - r.u(28)))
-        r.text(t("mode_easy" if easy else "mode_hard"), 18, WHITE, shadow=False, bold=False,
-               midleft=(r.u(20), sh - r.u(28)))
+        if app.overlays:
+            r.banner(sh - r.u(56), r.u(56))
+            r.text(t("invisible_today", n=app.stats["invisible"]), 26, YELLOW, center=(sw // 2, sh - r.u(28)))
+            r.text(t("mode_easy" if easy else "mode_hard"), 18, WHITE, shadow=False, bold=False,
+                   midleft=(r.u(20), sh - r.u(28)))
 
         if not players and self.phase != "result":
             r.text(t("no_players"), 44, WHITE, center=(sw // 2, sh // 2))
@@ -180,7 +181,7 @@ class EvasionStage(Stage):
             r.text(str(n), 200, YELLOW, center=(sw // 2, sh // 2 + r.u(30)))
         elif self.phase == "playing":
             left = max(0.0, config.ROUND_TIME - el)
-            r.text(f"{left:4.1f}", 72, YELLOW if left > 5 else RED, topright=(sw - r.u(30), r.u(120)))
+            r.text(f"{left:4.1f}", 72, YELLOW if left > 5 else RED, topright=(sw - r.u(30), r.top + r.u(12)))
         elif self.phase == "result":
             winners = sum(p.won for p in players.values())
             r.banner(sh // 2 - r.u(90), r.u(180), 200)
@@ -191,7 +192,7 @@ class EvasionStage(Stage):
             r.text(t("next_round"), 30, WHITE, center=(sw // 2, sh - r.u(100)))
         if self.instructions:
             r.instructions(t("instr_title") + ": " + t("s3_title"), t("evasion_steps"), t("instr_why"),
-                           t("evasion_why"), (r.u(24), r.u(125)))
+                           t("evasion_why"), (r.u(24), r.top + r.u(17)))
         if self.explain:
             self._draw_haar_tests(r, app, players)
             self._draw_explain(r)
@@ -232,7 +233,7 @@ class EvasionStage(Stage):
         h = (pad + len(title) * r.u(32) + r.u(10)
              + sum(r.u(34) + sum(len(x) * lh + r.u(6) for x in lines) + r.u(10) for _, lines in blocks)
              + r.u(30) + pad)
-        card = pygame.Rect(r.u(24), r.u(125), w, h)
+        card = pygame.Rect(r.u(24), r.top + r.u(17), w, h)
         r.shade(card, 215, r.u(16))
         pygame.draw.rect(r.screen, CYAN, card, r.u(2), border_radius=r.u(16))
         y = card.y + pad

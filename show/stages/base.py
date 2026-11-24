@@ -2,7 +2,7 @@
 import pygame
 
 from .. import config
-from ..draw import GREEN, GREY, YELLOW
+from ..draw import GREEN, GREY, WHITE, YELLOW
 from ..players import is_big
 from ..texts import t
 
@@ -33,13 +33,20 @@ class Stage:
         pass
 
     def draw_header(self, r, app):
+        """One thin line at the top: step and title. The subtitle shows below it for the first
+        seconds of the stage, then fades out, so the header covers little of the camera image."""
         if not self.title_key:
             return
         sw, _ = r.size
-        r.banner(0, r.u(108))
-        r.text(t("step", n=app.index + 1, total=len(app.stages)), 18, YELLOW, midtop=(sw // 2, r.u(6)))
-        r.text(t(self.title_key), 46, midtop=(sw // 2, r.u(28)))
-        r.text(t(self.sub_key), 20, shadow=False, bold=False, midtop=(sw // 2, r.u(80)))
+        h = r.u(config.HEADER_H)
+        r.banner(0, h, 110)
+        x = r.text(t("step", n=app.index + 1, total=len(app.stages)) + "  ·  ", 20, YELLOW,
+                   midleft=(r.u(20), h // 2)).right
+        r.text(t(self.title_key), 26, WHITE, midleft=(x, h // 2))
+        el = app.now - app.stage_start
+        fade = 1.0 if el < config.SUBTITLE_TIME - 1 else max(0.0, config.SUBTITLE_TIME - el)
+        if fade > 0 and getattr(self, "game", None) is None:  # a game has its own task line there
+            r.text(t(self.sub_key), 20, WHITE, bold=False, alpha=int(255 * fade), topleft=(r.u(20), h + r.u(6)))
 
 
 def draw_faces(r, det, skip=(), scores=None):

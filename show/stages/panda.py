@@ -108,7 +108,9 @@ class PandaStage(Stage):
             self._draw_explain(r, now - self.explain_start)
             return
 
-        # the story of the paper, on the right
+        # the story of the paper, on the right (the SIMULATION tag on each box always stays)
+        if not app.overlays:
+            return
         lines = t("s4_story")
         line = r.u(34)
         panel = pygame.Rect(sw - r.u(470), r.u(140), r.u(450), r.u(40) + line * len(lines))

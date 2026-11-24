@@ -125,7 +125,8 @@ python -m show 1
 | **E** | Steps 3 and 4: extra explanation on / off (old vs. modern AI; how the glasses are made). |
 | **M** | Step 3: easy (old AI) / hard (modern AI). |
 | **V** | Scores on faces on / off (step 3: only during a round). |
-| **T** | Step 2: other target (*Fool the AI!*) or other object (*Confusion meter*). |
+| **T** | Step 2: next target (*Fool the AI!*, Shift+T: previous target) or next object (*Confusion meter*; you can also click an object in the panel). |
+| **O** | Overlays on / off: title bar, info bars and QR code. Game meters and timers stay. |
 | **P** | Jump to step 4 (backup when step 3 does not work). |
 | **L** | Screen language: Dutch / English. |
 | **C** | Next camera. |

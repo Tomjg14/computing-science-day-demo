@@ -78,8 +78,10 @@ class App:
         self.attract = AttractStage()
         self.stages = [PixelStage(), DetectStage(), EvasionStage(), PandaStage()]
         self.debug = False
+        self.overlays = True          # header, info bars and QR code (O); game meters always show
         self.toast = None
         self.now = time.time()
+        self.stage_start = self.now
         self.last_person = self.now
         self.frame = self.det = None
         self.index = -1
@@ -110,6 +112,7 @@ class App:
             index = -1
         self.index = index
         self.stage = self.attract if index < 0 else self.stages[index]
+        self.stage_start = self.now
         self.stage.enter(self)
         nxt = self.stages[index + 1].name if index + 1 < len(self.stages) else "attract mode"
         print(f"[SHOW] now: {self.stage.name:<20} | RIGHT -> {nxt}")
@@ -208,6 +211,9 @@ class App:
             pygame.display.toggle_fullscreen()
         elif k == pygame.K_d:
             self.debug = not self.debug
+        elif k == pygame.K_o:
+            self.overlays = not self.overlays
+            self.tell_operator("Overlays (header, info bars, QR code): " + ("ON" if self.overlays else "OFF"))
         elif k == pygame.K_h:
             if self.panel:
                 self.panel.help = not self.panel.help
@@ -273,8 +279,11 @@ class App:
                 video, last_cam = cv2.flip(raw, 1), cam_n
             r = self.renderer
             r.video(video if video is not None else self.frame)
+            show_header = self.overlays and self.stage.title_key is not None
+            r.top = r.u(config.HEADER_H) if show_header else 0
             self.stage.draw(r, self, self.det, self.now)
-            self.stage.draw_header(r, self)
+            if show_header:
+                self.stage.draw_header(r, self)
             self.draw_overlays(r, self.det)
             pygame.display.flip()
 
@@ -296,7 +305,7 @@ class App:
 
     def draw_overlays(self, r, det):
         sw, sh = r.size
-        if self.qr is not None and getattr(self.stage, "game", None) is None:  # no QR over a game
+        if self.overlays and self.qr is not None and getattr(self.stage, "game", None) is None:  # no QR over a game
             q = r.u(100)
             img = pygame.transform.smoothscale(self.qr, (q, q))
             bottom = sh - (r.u(160) if self.index < 0 else r.u(110))

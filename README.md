@@ -125,7 +125,8 @@ python -m show 1
 | **E** | Stap 3 en 4: extra uitleg aan / uit (oude vs. moderne AI; hoe de bril gemaakt wordt). |
 | **M** | Stap 3: makkelijk (oude AI) / moeilijk (moderne AI). |
 | **V** | Scores op gezichten aan / uit (stap 3: alleen tijdens een ronde). |
-| **T** | Stap 2: ander doel (*Bedrieg de AI!*) of ander voorwerp (*Verwarringsmeter*). |
+| **T** | Stap 2: volgend doel (*Bedrieg de AI!*, Shift+T: vorig doel) of volgend voorwerp (*Verwarringsmeter*; je kunt ook een voorwerp aanklikken in het paneel). |
+| **O** | Overlays aan / uit: titelbalk, infobalken en QR-code. Spelmeters en tijd blijven staan. |
 | **P** | Direct naar stap 4 (reserve als stap 3 niet lukt). |
 | **L** | Taal van het scherm: Nederlands / Engels. |
 | **C** | Volgende camera. |

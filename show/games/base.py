@@ -93,12 +93,12 @@ class RoundGame:
         if self.instructions:
             prefix = self.name_key.replace("_name", "")
             r.instructions(t("instr_title") + ": " + t(self.name_key), t(prefix + "_steps"), t("instr_why"),
-                           t(prefix + "_why"), (r.u(24), r.u(192)))
+                           t(prefix + "_why"), (r.u(24), r.top + r.u(76)))
 
     def draw_task(self, r, text):
         sw, _ = r.size
-        r.banner(r.u(108), r.u(70), 120)
-        r.text(text, 40, YELLOW, center=(sw // 2, r.u(143)))
+        r.banner(r.top, r.u(60), 120)
+        r.text(text, 36, YELLOW, center=(sw // 2, r.top + r.u(30)))
 
     def draw_phase(self, r, app, now):
         """Countdown, timer and result card. Returns True when the card covers the game."""
@@ -111,7 +111,7 @@ class RoundGame:
             return True
         if self.phase == "playing":
             left = max(0.0, self.round_time - el)
-            r.text(f"{left:4.1f}", 72, YELLOW if left > 5 else (240, 70, 70), topright=(sw - r.u(30), r.u(185)))
+            r.text(f"{left:4.1f}", 72, YELLOW if left > 5 else (240, 70, 70), topright=(sw - r.u(30), r.top + r.u(70)))
         if self.phase == "result" and self.result is not None:
             if app.text_input is None:  # while the team name is typed, only the name card shows
                 self.draw_result(r, sw, sh)

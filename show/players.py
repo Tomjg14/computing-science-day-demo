@@ -36,6 +36,32 @@ def is_big(face, frame_w):
     return face.width / frame_w >= config.PLAYER_MIN_FACE
 
 
+def box_area(box):
+    return max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1])
+
+
+def held_by(obj, players):
+    """The player who holds this object, or None. An object counts as held when its center lies
+    inside a player's body box and it is much smaller than that body (config.HELD_MAX_SIZE).
+    Players are only the people close to the screen, so objects in the background never count."""
+    cx, cy = (obj.box[0] + obj.box[2]) / 2, (obj.box[1] + obj.box[3]) / 2
+    for p in players:
+        if p.body is None:
+            continue
+        x1, y1, x2, y2 = p.body
+        if x1 <= cx <= x2 and y1 <= cy <= y2 and box_area(obj.box) <= config.HELD_MAX_SIZE * box_area(p.body):
+            return p
+    return None
+
+
+def rank_objects(objs, players, min_conf=0.0):
+    """Objects that a person could hold, best first: held by a player, then larger.
+    Static objects (furniture, vehicles) and guesses below min_conf are left out."""
+    players = list(players)
+    objs = [o for o in objs if o.conf >= min_conf and o.name not in config.STATIC_OBJECTS]
+    return sorted(objs, key=lambda o: (held_by(o, players) is None, -box_area(o.box)))
+
+
 def match_to_bodies(faces, bodies, strength):
     """{body id: strongest face whose center lies in that body}. A face goes to the smallest
     body box that contains its center."""

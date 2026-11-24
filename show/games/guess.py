@@ -1,7 +1,9 @@
 """Game B - What does the AI think? A silhouette guessing game for the whole audience.
 
-SPACE freezes the image: a segmentation model cuts out the largest object, which appears
-as a black silhouette on a star burst. The audience guesses; SPACE reveals what the AI
+Only an object held by a player plays (players.held_by): the live image shows one '???' box,
+on that object. SPACE freezes the image: a segmentation model cuts out that object, which
+appears as a black silhouette on a star burst. With no held object, SPACE asks the players
+to hold one up and does not freeze; objects in the background never play. The audience guesses; SPACE reveals what the AI
 thinks, with the score counting up. No score is kept. The frozen image lives in memory
 only and is dropped for the next object (ADR 0001).
 """
@@ -13,6 +15,7 @@ import pygame
 
 from .. import config
 from ..draw import WHITE, YELLOW
+from ..players import held_by, rank_objects
 from ..texts import object_name, t
 from .base import CYAN, conf_color
 
@@ -20,6 +23,7 @@ RAYS = 20
 RAY_A, RAY_B = (70, 30, 120), (110, 50, 180)
 STAR_FILL, STAR_EDGE = (255, 210, 60), (255, 140, 40)
 COUNT_TIME = 1.4
+MATCH_IOU = 0.3   # a cut-out shape is the held object when its box overlaps this much
 FLASH_TIME = 0.45
 
 
@@ -49,7 +53,9 @@ class GuessGame:
         self.phase, self.phase_start = "live", 0.0   # live | looking | frozen | reveal
         self.instructions = True
         self.answer = None        # {"name", "conf", "also", "silhouette", "photo"} while frozen
+        self.held = None          # the object a player holds now (live phase), or None
         self.none_until = 0.0
+        self.none_key = "guess_none"
         self.segmenter = app.segmenter
         self.segmenter.preload()
 
@@ -69,9 +75,12 @@ class GuessGame:
             return False
         if self.phase == "live" and app.frame is not None:
             self.instructions = False
-            frame = app.frame.copy()
+            if self.held is None:  # nothing held: ask for an object, do not freeze
+                self.none_until, self.none_key = app.now + 3.0, "guess_hold"
+                return True
+            frame, target = app.frame.copy(), self.held.box
             self.phase, self.phase_start = "looking", app.now
-            self.segmenter.run_async(frame, lambda found: self._on_found(frame, found))
+            self.segmenter.run_async(frame, lambda found: self._on_found(frame, found, target))
         elif self.phase == "frozen":
             self.phase, self.phase_start = "reveal", app.now
         elif self.phase == "reveal":
@@ -79,12 +88,13 @@ class GuessGame:
             self.phase = "live"
         return True
 
-    def _on_found(self, frame, found):
-        """Runs in the segmenter thread: pick the largest object and cut it out."""
-        if not found:
-            self.phase, self.none_until = "live", self.phase_start + 3.0
+    def _on_found(self, frame, found, target):
+        """Runs in the segmenter thread: cut out the shape that matches the held object's box."""
+        match = max(found, key=lambda f: iou(f["box"], target), default=None)
+        if match is None or iou(match["box"], target) < MATCH_IOU:
+            self.phase, self.none_until, self.none_key = "live", self.phase_start + 3.0, "guess_none"
             return
-        main = max(found, key=lambda f: f["mask"].sum())
+        main = match
         also = sorted((f for f in found if f is not main and f["name"] != main["name"]
                        and iou(f["box"], main["box"]) > 0.4), key=lambda f: -f["conf"])
         seen, alternatives = set(), []
@@ -106,23 +116,25 @@ class GuessGame:
         self.phase = "frozen"
 
     def update(self, app, det, now, dt):
-        pass
+        players = list(app.players.players.values())
+        ranked = rank_objects(det.objects, players)
+        self.held = ranked[0] if ranked and held_by(ranked[0], players) is not None else None
 
     # --- screen ---
     def draw(self, r, app, det, now):
         sw, sh = r.size
         if self.phase in ("live", "looking"):
-            for o in det.objects:  # boxes without labels: no spoilers
-                r.labeled_box(o.box, "???", (150, 150, 150), width=3, size=24)
-            r.banner(r.u(108), r.u(70), 120)
-            r.text(t("guess_live"), 40, YELLOW, center=(sw // 2, r.u(143)))
+            if self.held is not None and self.phase == "live":  # one box, no label: no spoilers
+                r.labeled_box(self.held.box, "???", YELLOW, width=4, size=24)
+            r.banner(r.top, r.u(60), 120)
+            r.text(t("guess_live"), 36, YELLOW, center=(sw // 2, r.top + r.u(30)))
             if self.phase == "looking":
                 r.text(t("guess_looking"), 44, WHITE, center=(sw // 2, sh // 2))
             elif now < self.none_until:
-                r.text(t("guess_none"), 36, (255, 140, 40), center=(sw // 2, sh // 2))
+                r.text(t(self.none_key), 36, (255, 140, 40), center=(sw // 2, sh // 2))
             if self.instructions:
                 r.instructions(t("instr_title") + ": " + t("guess_name"), t("guess_steps"), t("instr_why"),
-                               t("guess_why"), (r.u(24), r.u(192)))
+                               t("guess_why"), (r.u(24), r.top + r.u(76)))
             return
         if self.answer is None:
             return

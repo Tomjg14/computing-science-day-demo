@@ -72,8 +72,9 @@ class PixelStage(Stage):
         sw, sh = r.size
         if self.photo is None:
             draw_faces(r, det)
-            r.banner(sh - r.u(90), r.u(90))
-            r.text(t("s1_prompt"), 32, YELLOW, center=(sw // 2, sh - r.u(45)))
+            if app.overlays:
+                r.banner(sh - r.u(90), r.u(90))
+                r.text(t("s1_prompt"), 32, YELLOW, center=(sw // 2, sh - r.u(45)))
             return
 
         el = now - self.t0

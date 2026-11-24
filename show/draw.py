@@ -31,6 +31,7 @@ class Renderer:
         self.screen = screen
         self._fonts = {}
         self.sx = self.sy = 1.0
+        self.top = 0  # height of the header line now on screen (0 = no header); games draw below it
 
     @property
     def size(self):
@@ -66,14 +67,18 @@ class Renderer:
     def point(self, x, y):
         return int(x * self.sx), int(y * self.sy)
 
-    def text(self, s, size, color=WHITE, shadow=True, bold=True, mono=False, **pos):
-        """Draw text; pos is one rect anchor, e.g. center=(x, y) or topleft=(x, y)."""
+    def text(self, s, size, color=WHITE, shadow=True, bold=True, mono=False, alpha=255, **pos):
+        """Draw text; pos is one rect anchor, e.g. center=(x, y) or topleft=(x, y).
+        alpha below 255 makes the text see-through (for fading)."""
         f = self.font(size, bold, mono)
         img = f.render(s, True, color)
+        img.set_alpha(alpha)
         r = img.get_rect(**pos)
         if shadow:
             off = self.u(3)
-            self.screen.blit(f.render(s, True, BLACK), r.move(off, off))
+            back = f.render(s, True, BLACK)
+            back.set_alpha(alpha)
+            self.screen.blit(back, r.move(off, off))
         self.screen.blit(img, r)
         return r
 

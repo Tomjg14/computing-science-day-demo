@@ -30,20 +30,24 @@ CONF_SURE = 0.80             # stage 2 colors: green from here
 CONF_UNSURE = 0.60           # yellow from here, orange below
 
 OBJECT_MIN_CONF = 0.10       # weakest object guess the model reports (for game meters only)
+STATIC_OBJECTS = {"tv", "couch", "chair", "bed", "dining table", "refrigerator", "oven", "sink",
+                  "toilet", "potted plant", "bench", "microwave", "car", "bus", "truck", "train",
+                  "airplane", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter"}
+                             # objects nobody holds up: never shown in stage 2, never picked by a game
+HELD_MAX_SIZE = 0.5          # a held object is at most this part of the player's body box area
+STAGE2_MAX_OBJECTS = 5       # stage 2 free detection: at most this many object boxes (held ones first)
 
 # --- stage 2 games ---
-FOOL_TARGETS = ["banana", "apple", "orange", "carrot", "clock", "tie", "teddy bear",
-                "cup", "scissors", "umbrella", "book", "donut", "cat", "dog", "giraffe"]
+FOOL_TARGETS = ["banana", "apple", "orange", "carrot", "donut", "clock", "cup", "scissors",
+                "teddy bear", "umbrella", "tie", "book"]
+                             # fixed order; the game starts at the first one, T / Shift+T step through
 FOOL_ROUND_TIME = 20.0
 FOOL_SEEN_MIN = 0.20         # "the AI sees now" shows guesses from this confidence
 CONFUSE_ROUND_TIME = 30.0
 CONFUSE_MIN_CONF = 0.30      # the followed object needs at least this confidence
 CONFUSE_STABLE = 3           # a new label must hold this many detection updates to count
 CONFUSE_LOCK_IOU = 0.2       # lost tracker id: the object with this much box overlap is the same object
-CONFUSE_SKIP = {"tv", "couch", "chair", "bed", "dining table", "refrigerator", "oven", "sink",
-                "toilet", "potted plant", "bench", "microwave", "car", "bus", "truck", "train",
-                "airplane", "boat", "traffic light", "fire hydrant", "stop sign", "parking meter"}
-                             # objects nobody holds up: never picked as the game 4 object
+CONFUSE_MAX_CANDIDATES = 6   # numbered objects the operator can choose from before a round
 HUNT_TARGETS = ["bottle", "cell phone", "backpack", "book", "cup", "handbag", "laptop",
                 "umbrella", "chair", "clock", "scissors", "toothbrush"]
 HUNT_ROUND_TIME = 45.0
@@ -58,6 +62,9 @@ ATTRACT_BOARD_TIME = 8.0     # ... for this long
 PLAYER_MIN_FACE = 0.07       # (live) face width / frame width to count as a player
 MAX_PLAYERS = 4
 PLAYER_LOST_AFTER = 1.0      # seconds without a body before a player is dropped
+
+# --- attract mode ---
+ATTRACT_MAX_BOXES = 12       # at most this many people get a box (the largest first)
 
 # --- show flow ---
 IDLE_RETURN = 30.0           # seconds with nobody in view -> attract mode
@@ -84,4 +91,6 @@ GLASSES_FILE = ROOT / "assets" / "glasses.png"
 GLASSES_SCALE = 2.5          # glasses width relative to eye distance
 
 # --- overlays ---
+HEADER_H = 44                # height of the stage title line at the top
+SUBTITLE_TIME = 8.0          # the stage subtitle shows this long after a stage starts, then fades
 QR_FILE = ROOT / "assets" / "qr-code.png"

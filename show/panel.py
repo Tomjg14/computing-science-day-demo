@@ -168,14 +168,17 @@ class OperatorPanel:
         for row in ((("< Previous", pygame.K_LEFT, "LEFT"), ("Next >", pygame.K_RIGHT, "RIGHT")),
                     (("Attract mode", pygame.K_ESCAPE, "ESC"), ("Panda backup", pygame.K_p, "P")),
                     (("Language NL/EN", pygame.K_l, "L"), ("Next camera", pygame.K_c, "C")),
-                    (("Fullscreen", pygame.K_f, "F"), ("Debug", pygame.K_d, "D"),
-                     ("Face scores", pygame.K_v, "V"))):
+                    (("Overlays", pygame.K_o, "O"), ("Fullscreen", pygame.K_f, "F"), ("Debug", pygame.K_d, "D"),
+                     ("Scores", pygame.K_v, "V"))):
             bw = (w - 10 * (len(row) - 1)) // len(row)
             for i, (label, key, hint) in enumerate(row):
-                on = (key == pygame.K_d and app.debug) or (key == pygame.K_v and config.SHOW_SCORES)
+                on = ((key == pygame.K_d and app.debug) or (key == pygame.K_v and config.SHOW_SCORES)
+                      or (key == pygame.K_o and app.overlays))
                 self._button((x + i * (bw + 10), y, bw, 40), label, key=key, hint=hint, color=BTN_ON if on else BTN)
             y += 48
 
+        if app.index == 1:
+            return  # stage 2 needs the space for the game controls; the room settings are for players
         y += 8
         self._text("ROOM SETTINGS", self.f_small, DIM, (x, y))
         y += 22
@@ -207,20 +210,40 @@ class OperatorPanel:
             self._button((x + i * (bw + 10), y, bw, 34), label, key=key, color=color, font=self.f_small)
         y += 42
         if game is not None:
-            half = (w - 10) // 2
-            if game.game_id == "fool":  # only Fool the AI has a target the operator can choose
-                self._text(f"Target: {object_name(game.target)}", self.f, YELLOW, (x, y + 9))
-                self._button((x + half + 10, y, half, 34), "Other target", key=pygame.K_t, hint="T")
+            if game.game_id == "fool":  # the target, in a fixed order
+                third = (w - 20) // 3
+                self._button((x, y, third, 34), "< Target", action=lambda: game.step_target(-1), hint="Sh+T")
+                img = self.f.render(object_name(game.target), True, YELLOW)
+                s = self.surface
+                s.blit(img, img.get_rect(center=(x + third + 10 + third // 2, y + 17)))
+                self._button((x + 2 * (third + 10), y, third, 34), "Target >", action=lambda: game.step_target(1),
+                             hint="T")
                 y += 42
             if game.game_id == "confuse" and game.phase in ("wait", "result"):
-                name = object_name(game.main.name) if game.main is not None else "-"
-                self._text(f"Object: {name}", self.f, YELLOW, (x, y + 9))
-                self._button((x + half + 10, y, half, 34), "Other object", key=pygame.K_t, hint="T")
-                y += 42
+                y = self._draw_confuse_choices(game, x, w, y)
             if game.can_name():
                 self._button((x, y, w, 40), "Enter team name", key=pygame.K_n, color=(40, 140, 80), hint="N")
                 y += 48
         return y + 6
+
+    def _draw_confuse_choices(self, game, x, w, y):
+        """The numbered candidates as buttons: click one to choose it (T: next number)."""
+        choices = game.choices()
+        pick = "your choice" if game.pick_id is not None else "automatic"
+        self._text(f"OBJECT THAT COUNTS ({pick}; * = held by a player)", self.f_small, DIM, (x, y))
+        y += 20
+        if not choices:
+            self._text("no objects in view", self.f_small, DIM, (x, y + 4))
+            return y + 30
+        cols = 3
+        bw = (w - 10 * (cols - 1)) // cols
+        main_id = game.main.id if game.main is not None else None
+        for i, (n, o, held) in enumerate(choices):
+            bx, by = x + (i % cols) * (bw + 10), y + (i // cols) * 38
+            label = f"{n} {object_name(o.name)}{' *' if held else ''}"
+            self._button((bx, by, bw, 32), label, action=lambda oid=o.id: game.pick(oid),
+                         color=BTN_MAIN if o.id == main_id else BTN, font=self.f_small)
+        return y + ((len(choices) + cols - 1) // cols) * 38 + 4
 
     def _draw_scores(self, x, w):
         app, s = self.app, self.surface

@@ -1,7 +1,9 @@
 """Stage 2 - How sure is the computer? Faces and objects, colored by their confidence score.
 
 An object is only shown after the tracker has followed it for a few frames in a row,
-so one-frame mistakes do not reach the screen.
+so one-frame mistakes do not reach the screen. To keep the screen calm, at most
+config.STAGE2_MAX_OBJECTS objects show: objects held by a player first, then the largest.
+Static objects (furniture and the like) never show.
 """
 import pygame
 
@@ -11,7 +13,7 @@ from ..games.fool import FoolGame
 from ..games.guess import GuessGame
 from ..games.hunt import HuntGame
 from ..draw import GREEN, WHITE, YELLOW
-from ..players import is_big
+from ..players import is_big, rank_objects
 from ..texts import object_name, t
 from .base import Stage
 
@@ -55,7 +57,8 @@ class DetectStage(Stage):
             if o.id is not None:
                 seen[o.id] = self.streak.get(o.id, 0) + 1
         self.streak = seen
-        self.stable = [o for o in det.objects if o.id is not None and seen[o.id] >= config.OBJECT_MIN_FRAMES]
+        stable = [o for o in det.objects if o.id is not None and seen[o.id] >= config.OBJECT_MIN_FRAMES]
+        self.stable = rank_objects(stable, app.players.players.values())[:config.STAGE2_MAX_OBJECTS]
         for o in self.stable:
             self.found[o.name] = max(o.conf, self.found.get(o.name, 0.0))
         if self.game:
@@ -74,11 +77,13 @@ class DetectStage(Stage):
         for o in self.stable:
             r.labeled_box(o.box, f"{object_name(o.name)} {o.conf:.0%}", conf_color(o.conf), size=24)
 
+        if not app.overlays:
+            return
         sw, sh = r.size
         if self.found:
             items = sorted(self.found.items(), key=lambda kv: -kv[1])[:MAX_FOUND]
             line = r.u(36)
-            panel = pygame.Rect(sw - r.u(330), r.u(125), r.u(310), r.u(60) + line * len(items))
+            panel = pygame.Rect(sw - r.u(330), r.top + r.u(20), r.u(310), r.u(60) + line * len(items))
             r.shade(panel, 170, r.u(14))
             r.text(t("s2_found"), 26, YELLOW, topleft=(panel.x + r.u(16), panel.y + r.u(12)))
             for i, (name, conf) in enumerate(items):
