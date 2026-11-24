@@ -66,7 +66,7 @@ class App:
         except Exception as e:  # the show still works with keys only
             print(f"[SHOW] Operator panel not available: {e}")
 
-        self.qr = pygame.image.load(str(config.QR_FILE)) if config.QR_FILE.exists() else None
+        self.qr = pygame.image.load(str(config.QR_FILE)).convert() if config.QR_FILE.exists() else None
         self.players = PlayerTracker()
         self.stats = {"faces_seen": set(), "invisible": 0}  # counts only, no face data
         self.board = Leaderboard()
