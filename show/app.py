@@ -79,6 +79,7 @@ class App:
         self.stages = [PixelStage(), DetectStage(), EvasionStage(), PandaStage()]
         self.debug = False
         self.overlays = True          # header, info bars and QR code (O); game meters always show
+        self.show_qr = True           # the QR code on its own (K)
         self.toast = None
         self.now = time.time()
         self.stage_start = self.now
@@ -147,6 +148,12 @@ class App:
     def show_board(self, game, seconds, highlight=None):
         self.board_overlay = (game, self.now + seconds, highlight)
 
+    def board_showing(self):
+        return self.board_overlay is not None and self.now < self.board_overlay[1]
+
+    def close_board(self):
+        self.board_overlay = None
+
     def start_text_input(self, prompt, done):
         self.text_input = {"prompt": prompt, "text": "", "done": done}
 
@@ -195,6 +202,8 @@ class App:
             self.go(self.index + 1)
         elif k == pygame.K_LEFT:
             self.go(max(-1, self.index - 1))
+        elif k == pygame.K_ESCAPE and self.board_showing():
+            self.board_overlay = None   # ESC closes a leaderboard on screen first
         elif k == pygame.K_ESCAPE:
             self.go(-1)
         elif k == pygame.K_p:
@@ -211,6 +220,9 @@ class App:
             pygame.display.toggle_fullscreen()
         elif k == pygame.K_d:
             self.debug = not self.debug
+        elif k == pygame.K_k:
+            self.show_qr = not self.show_qr
+            self.tell_operator("QR code: " + ("ON" if self.show_qr else "OFF"))
         elif k == pygame.K_o:
             self.overlays = not self.overlays
             self.tell_operator("Overlays (header, info bars, QR code): " + ("ON" if self.overlays else "OFF"))
@@ -305,11 +317,9 @@ class App:
 
     def draw_overlays(self, r, det):
         sw, sh = r.size
-        if self.overlays and self.qr is not None and getattr(self.stage, "game", None) is None:  # no QR over a game
-            q = r.u(100)
-            img = pygame.transform.smoothscale(self.qr, (q, q))
-            bottom = sh - (r.u(160) if self.index < 0 else r.u(110))
-            r.screen.blit(img, (sw - q - r.u(16), bottom - q))
+        if self.overlays and self.show_qr and self.qr is not None and getattr(self.stage, "game", None) is None:
+            q = r.u(90)   # bottom-right corner, out of the way of the explanations; no QR over a game
+            r.screen.blit(pygame.transform.smoothscale(self.qr, (q, q)), (sw - q - r.u(6), sh - q - r.u(6)))
         if self.board_overlay and self.now < self.board_overlay[1]:
             game, _, hl = self.board_overlay
             draw_board(r, self.board, game, highlight=hl, center=(sw // 2, sh // 2))

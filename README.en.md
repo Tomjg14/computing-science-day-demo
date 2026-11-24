@@ -119,14 +119,15 @@ python -m show 1
 |---|---|
 | **SPACE** | Start the session (attract screen) or the action of the step: take a photo, start a round. |
 | **→ / ←** | Next / previous step. |
-| **ESC** | Back to the attract screen. |
+| **ESC** | Back to the attract screen. With a leaderboard on screen, ESC only closes it. |
 | **1 – 4 / 0** | Step 2: choose a game / back to free detection. |
 | **I** | "How to play" card on / off. |
-| **E** | Steps 3 and 4: extra explanation on / off (old vs. modern AI; how the glasses are made). |
+| **E** | Explanation, live with real numbers. Step 2: how YOLO finds objects. Step 3: old AI → modern AI → off. Step 4: how the glasses are made. |
 | **M** | Step 3: easy (old AI) / hard (modern AI). |
 | **V** | Scores on faces on / off (step 3: only during a round). |
 | **T** | Step 2: next target (*Fool the AI!*, Shift+T: previous target) or next object (*Confusion meter*; you can also click an object in the panel). |
 | **O** | Overlays on / off: title bar, info bars and QR code. Game meters and timers stay. |
+| **K** | QR code on / off. |
 | **P** | Jump to step 4 (backup when step 3 does not work). |
 | **L** | Screen language: Dutch / English. |
 | **C** | Next camera. |

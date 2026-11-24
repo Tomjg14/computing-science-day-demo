@@ -119,14 +119,15 @@ python -m show 1
 |---|---|
 | **SPATIE** | Start de sessie (wachtscherm) of de actie van de stap: foto maken, ronde starten. |
 | **→ / ←** | Volgende / vorige stap. |
-| **ESC** | Terug naar het wachtscherm. |
+| **ESC** | Terug naar het wachtscherm. Staat er een scorebord op het scherm, dan sluit ESC alleen dat. |
 | **1 – 4 / 0** | Stap 2: kies een spel / terug naar vrij kijken. |
 | **I** | Uitleg "hoe speel je het" aan / uit. |
-| **E** | Stap 3 en 4: extra uitleg aan / uit (oude vs. moderne AI; hoe de bril gemaakt wordt). |
+| **E** | Uitleg, live met echte getallen. Stap 2: hoe YOLO voorwerpen vindt. Stap 3: oude AI → moderne AI → uit. Stap 4: hoe de bril gemaakt wordt. |
 | **M** | Stap 3: makkelijk (oude AI) / moeilijk (moderne AI). |
 | **V** | Scores op gezichten aan / uit (stap 3: alleen tijdens een ronde). |
 | **T** | Stap 2: volgend doel (*Bedrieg de AI!*, Shift+T: vorig doel) of volgend voorwerp (*Verwarringsmeter*; je kunt ook een voorwerp aanklikken in het paneel). |
 | **O** | Overlays aan / uit: titelbalk, infobalken en QR-code. Spelmeters en tijd blijven staan. |
+| **K** | QR-code aan / uit. |
 | **P** | Direct naar stap 4 (reserve als stap 3 niet lukt). |
 | **L** | Taal van het scherm: Nederlands / Engels. |
 | **C** | Volgende camera. |

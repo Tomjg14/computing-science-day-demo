@@ -4,53 +4,20 @@ Two modes (key M): hard uses the modern face model (YOLO, a confidence score), e
 classic Haar cascade (a count of overlapping hits). With the scores off (key V), the bar is
 hidden until the round starts, so players do not test their disguise in advance.
 
-Key E shows an explanation: why the old model is easier to fool than the modern one. On each
-player's face it draws two classic Haar tests and checks them on the real camera image.
+Key E shows an explanation, live on the largest face: first how the old AI (Haar cascade) tests
+it, then (E again) what the layers of the modern AI see; E a third time closes it
+(explain_pages.py).
 """
 import math
 import random
 
-import cv2
 import pygame
 
 from .. import config
-from ..draw import CYAN, GREEN, PLAYER_COLORS, PURPLE, RED, WHITE, YELLOW, mix
+from ..draw import GREEN, PLAYER_COLORS, PURPLE, RED, WHITE, YELLOW, mix
 from ..texts import t
 from .base import Stage, draw_faces
-
-# Two classic Haar tests (Viola & Jones, 2001), as parts of the face box: (x1, y1, x2, y2).
-# Each test asks: are the dark parts darker than the light parts?
-HAAR_TESTS = [
-    ("x3_test_eyes", [(0.12, 0.28, 0.88, 0.46)], [(0.12, 0.46, 0.88, 0.64)]),            # eyes / cheeks
-    ("x3_test_nose", [(0.16, 0.30, 0.40, 0.46), (0.60, 0.30, 0.84, 0.46)], [(0.40, 0.30, 0.60, 0.46)]),
-]
-
-
-def _part(box, f):
-    x1, y1, x2, y2 = box
-    w, h = x2 - x1, y2 - y1
-    return x1 + f[0] * w, y1 + f[1] * h, x1 + f[2] * w, y1 + f[3] * h
-
-
-def _mean(gray, b):
-    crop = gray[max(0, int(b[1])):max(0, int(b[3])), max(0, int(b[0])):max(0, int(b[2]))]
-    return float(crop.mean()) if crop.size else None
-
-
-def haar_test(gray, face_box, dark, light):
-    """True when the dark parts are darker than the light parts (mean gray value), None if unknown."""
-    d = [_mean(gray, _part(face_box, f)) for f in dark]
-    li = [_mean(gray, _part(face_box, f)) for f in light]
-    if None in d or None in li:
-        return None
-    return sum(d) / len(d) < sum(li) / len(li)
-
-
-def _fill(r, rect, color, alpha):
-    s = pygame.Surface(rect.size, pygame.SRCALPHA)
-    s.fill((*color, alpha))
-    r.screen.blit(s, rect.topleft)
-
+from .explain_pages import ModelExplainer
 
 class EvasionStage(Stage):
     name = "3 evasion game"
@@ -62,7 +29,17 @@ class EvasionStage(Stage):
         self.phase_start = app.now
         self.particles = []          # confetti: [x, y, vx, vy, color, life] in screen pixels
         self.instructions = True     # the "how to play" card shows until the first round starts
-        self.explain = False         # the model explanation (key E)
+        if self.explainer is None:
+            self.explainer = ModelExplainer()
+        self.explainer.preload()
+        self.explainer.close()
+
+    explainer = None                 # the model explanation (key E); made once, it loads models
+
+    @property
+    def explain(self):
+        """The explanation page on screen: None, "old" or "new" (for the operator panel)."""
+        return self.explainer.page if self.explainer is not None else None
 
     def _set(self, phase, now):
         self.phase, self.phase_start = phase, now
@@ -73,14 +50,16 @@ class EvasionStage(Stage):
     def on_key(self, key, app):
         if key == pygame.K_i:
             self.instructions = not self.instructions
-            self.explain = self.explain and not self.instructions
+            if self.instructions:
+                self.explainer.close()
             return True
         if key == pygame.K_e:
-            self.explain = not self.explain
+            self.explainer.next_page(app.now)
             self.instructions = self.instructions and not self.explain
             return True
         if key == pygame.K_SPACE and self.phase in ("wait", "result"):
-            self.instructions = self.explain = False
+            self.instructions = False
+            self.explainer.close()
             for p in app.players.players.values():
                 p.streak, p.won, p.won_at = 0.0, False, None
             self._set("countdown", app.now)
@@ -88,6 +67,7 @@ class EvasionStage(Stage):
         return False
 
     def update(self, app, det, now, dt):
+        self.explainer.update(app, det, now)
         el = now - self.phase_start
         if self.phase == "countdown" and el >= config.COUNTDOWN_TIME:
             self._set("playing", now)
@@ -194,61 +174,4 @@ class EvasionStage(Stage):
             r.instructions(t("instr_title") + ": " + t("s3_title"), t("evasion_steps"), t("instr_why"),
                            t("evasion_why"), (r.u(24), r.top + r.u(17)))
         if self.explain:
-            self._draw_haar_tests(r, app, players)
-            self._draw_explain(r)
-
-    @staticmethod
-    def _draw_haar_tests(r, app, players):
-        """Two classic Haar tests on each player's face, checked on the real camera image."""
-        if app.frame is None:
-            return
-        gray = cv2.cvtColor(app.frame, cv2.COLOR_BGR2GRAY)
-        active = int(app.now / 2.5) % len(HAAR_TESTS)  # the tests overlap: show one at a time
-        for p in players.values():
-            if p.face is None:
-                continue
-            fbox = r.rect(p.face.box)
-            y = fbox.bottom + r.u(8)
-            for i, (key, dark, light) in enumerate(HAAR_TESTS):
-                ok = haar_test(gray, p.face.box, dark, light)
-                if i == active:
-                    for f in dark:
-                        _fill(r, r.rect(_part(p.face.box, f)), (0, 0, 0), 120)
-                    for f in light:
-                        _fill(r, r.rect(_part(p.face.box, f)), (255, 255, 255), 120)
-                color = (GREEN if ok else RED) if i == active else mix((GREEN if ok else RED), (0, 0, 0), 0.25)
-                answer = "?" if ok is None else t("yes") if ok else t("no")
-                y = r.text(f"{t(key)} {answer}", 18, color, topleft=(fbox.x, y)).bottom + r.u(2)
-            pygame.draw.rect(r.screen, CYAN, fbox, r.u(2), border_radius=r.u(6))
-
-    @staticmethod
-    def _draw_explain(r):
-        """Card on the left: old AI against modern AI."""
-        pad, w = r.u(18), r.u(520)
-        inner = w - 2 * pad - r.u(18)
-        blocks = [(t("x3_old"), [r.wrap(s, 19, inner, bold=False) for s in t("x3_old_lines")]),
-                  (t("x3_new"), [r.wrap(s, 19, inner, bold=False) for s in t("x3_new_lines")])]
-        title = r.wrap(t("x3_title"), 26, w - 2 * pad)
-        lh = r.u(24)
-        h = (pad + len(title) * r.u(32) + r.u(10)
-             + sum(r.u(34) + sum(len(x) * lh + r.u(6) for x in lines) + r.u(10) for _, lines in blocks)
-             + r.u(30) + pad)
-        card = pygame.Rect(r.u(24), r.top + r.u(17), w, h)
-        r.shade(card, 215, r.u(16))
-        pygame.draw.rect(r.screen, CYAN, card, r.u(2), border_radius=r.u(16))
-        y = card.y + pad
-        for line in title:
-            r.text(line, 26, CYAN, shadow=False, topleft=(card.x + pad, y))
-            y += r.u(32)
-        y += r.u(10)
-        for (head, lines), color in zip(blocks, (YELLOW, GREEN)):
-            r.text(head, 22, color, shadow=False, topleft=(card.x + pad, y))
-            y += r.u(34)
-            for item in lines:
-                pygame.draw.circle(r.screen, color, (card.x + pad + r.u(5), y + r.u(11)), r.u(4))
-                for line in item:
-                    r.text(line, 19, WHITE, shadow=False, bold=False, topleft=(card.x + pad + r.u(18), y))
-                    y += lh
-                y += r.u(6)
-            y += r.u(10)
-        r.text(t("x3_live"), 17, CYAN, shadow=False, bold=False, topleft=(card.x + pad, y))
+            self.explainer.draw(r, app, now)

@@ -3,12 +3,16 @@
 The glasses are drawn on the screen only; the model never sees them, and the
 "Panda" label is fixed. The screen says so with a SIMULATION tag.
 
-Key E shows how such glasses are made, step by step (like stage 1), next to an animation
-of a glasses pattern that changes while a score bar moves. That animation is not computed
-from a model, so it carries an ILLUSTRATION tag.
+Key E shows how such glasses are made, step by step (like stage 1). On the right, the face of
+the player shows as pixel blocks (one camera image, taken when E is pressed and kept in memory
+only). Then a glasses frame goes on top, the face fades to the background, and the frame
+pixels change into a pattern while two score bars move; a magnifier shows the numbers of one
+frame pixel before and now. The pattern and the scores are not computed from a model, so
+they carry an ILLUSTRATION tag.
 """
 import math
 
+import cv2
 import numpy as np
 import pygame
 from PIL import Image
@@ -17,12 +21,17 @@ from .. import config
 from ..draw import CYAN, GREEN, RED, WHITE, YELLOW
 from ..players import is_big
 from ..texts import t
+from ..vision import crop_square
 from .base import Stage
 
 MAX_PANDAS = 4
 STEP_TIME = 3.5        # explanation: seconds per step
 ILLUS_TIME = 10.0      # the pattern animation runs this long, then holds
-GRID_W, GRID_H = 16, 6
+GRID_W, GRID_H = 16, 6     # the glasses frame
+FACE_N = 16                # the face: FACE_N x FACE_N pixel blocks
+FACE_MARGIN = 0.05         # space around the face box in the face image (small: the glasses span the face)
+FRAME_START = (45, 45, 45)  # color of the plain frame before the change
+MAGNIFY_TIME = 1.5         # seconds per pixel in the magnifier
 
 
 def _frame_cells():
@@ -82,8 +91,31 @@ class PandaStage(Stage):
         if key == pygame.K_e:
             self.explain = not self.explain
             self.explain_start = app.now
+            if self.explain:
+                self._take_face(app)
             return True
         return False
+
+    def _take_face(self, app):
+        """One image of the largest face as FACE_N x FACE_N color blocks, and the row of the eyes.
+        No face: gray blocks, eyes at the usual height."""
+        self.face_cells, self.frame_row = np.full((FACE_N, FACE_N, 3), 110, np.uint8), 5
+        faces = self.targets(app.det) if app.det is not None else []
+        if not faces or app.frame is None:
+            return
+        f = faces[0]
+        crop = crop_square(app.frame, f.box, margin=FACE_MARGIN)
+        if crop.size == 0:
+            return
+        small = cv2.resize(crop, (FACE_N, FACE_N), interpolation=cv2.INTER_AREA)
+        self.face_cells = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+        # the frame goes over the eyes: their height in the face image, as a block row
+        x1, y1, x2, y2 = f.box
+        half = max(x2 - x1, y2 - y1) * (0.5 + FACE_MARGIN)
+        top = max(0.0, (y1 + y2) / 2 - half)
+        eye_y = sum(pt[1] for pt in eye_points(f)) / 2
+        eye_row = (eye_y - top) / (2 * half) * FACE_N   # in blocks, from the top
+        self.frame_row = int(np.clip(round(eye_row - GRID_H / 2), 0, FACE_N - GRID_H))
 
     def targets(self, det):
         faces = [f for f in det.faces if f.conf >= config.FACE_VISIBLE_CONF]
@@ -122,10 +154,10 @@ class PandaStage(Stage):
                bottomright=(panel.right - r.u(14), panel.bottom - r.u(8)))
 
     def _draw_explain(self, r, el):
-        """Steps on the left, one by one; the pattern illustration on the right."""
+        """Steps on the left, one by one; the face and the glasses pattern on the right."""
         sw, sh = r.size
         r.shade(pygame.Rect(0, 0, sw, sh), 205)
-        x, y, w = r.u(50), r.u(125), r.u(640)
+        x, y, w = r.u(50), r.top + r.u(24), r.u(620)
         r.text(t("x4_title"), 34, CYAN, topleft=(x, y))
         y += r.u(56)
         steps = t("x4_steps")
@@ -140,34 +172,66 @@ class PandaStage(Stage):
             y += r.u(14)
         if el >= STEP_TIME * len(steps):
             r.text(t("x4_end"), 26, YELLOW, topleft=(x, y + r.u(10)))
+        self._draw_face_pattern(r, el)
 
-        if el >= STEP_TIME:  # the pattern starts to change with step 2
-            self._draw_pattern(r, min(1.0, (el - STEP_TIME) / ILLUS_TIME), el)
-
-    @staticmethod
-    def _draw_pattern(r, k, el):
-        """Illustration: the frame pixels move to a strange pattern, the scores move with them."""
+    def _draw_face_pattern(self, r, el):
+        """Step 1: the face as pixel blocks. Step 2: a plain glasses frame on top, the face fades.
+        From step 3: the frame pixels change into a pattern; the scores move with them."""
         sw, _ = r.size
-        cell = r.u(28)
-        gx, gy = sw - r.u(40) - GRID_W * cell, r.u(190)
-        flicker = 0.0 if k >= 1 else 0.25
-        rng = np.random.default_rng(int(el * 8))         # a small change every update, like a step
-        for (row, col), target in zip(FRAME_CELLS, TARGET_COLORS):
-            c = (1 - k) * np.array([45, 45, 45]) + k * target
-            c = np.clip(c + flicker * rng.integers(-60, 61, size=3), 0, 255).astype(int)
-            rect = pygame.Rect(gx + col * cell, gy + row * cell, cell - 2, cell - 2)
-            pygame.draw.rect(r.screen, tuple(c), rect)
-        pygame.draw.rect(r.screen, WHITE, (gx - 6, gy - 6, GRID_W * cell + 10, GRID_H * cell + 10), 2,
+        cell = r.u(24)
+        gx, gy = sw - r.u(40) - FACE_N * cell, r.top + r.u(20)
+        glasses = el >= STEP_TIME                                      # from step 2
+        k = min(1.0, max(0.0, (el - 2 * STEP_TIME) / ILLUS_TIME))      # pattern progress, from step 3
+        face = self.face_cells.astype(float)
+        if glasses:
+            face = face * 0.35 + 15                                     # the face fades to the background
+        for row in range(FACE_N):
+            for col in range(FACE_N):
+                pygame.draw.rect(r.screen, tuple(int(v) for v in face[row, col]),
+                                 (gx + col * cell, gy + row * cell, cell - 1, cell - 1))
+        colors = []
+        if glasses:
+            flicker = 0.25 if 0 < k < 1 else 0.0
+            rng = np.random.default_rng(int(el * 8))                    # a small change every update, like a step
+            for (row, col), target in zip(FRAME_CELLS, TARGET_COLORS):
+                c = (1 - k) * np.array(FRAME_START) + k * target
+                c = np.clip(c + flicker * rng.integers(-60, 61, size=3), 0, 255).astype(int)
+                colors.append(tuple(int(v) for v in c))
+                rect = pygame.Rect(gx + col * cell, gy + (self.frame_row + row) * cell, cell - 1, cell - 1)
+                pygame.draw.rect(r.screen, colors[-1], rect)
+        pygame.draw.rect(r.screen, WHITE, (gx - 5, gy - 5, FACE_N * cell + 9, FACE_N * cell + 9), 2,
                          border_radius=r.u(6))
-        r.text(t("x4_step", n=int(k * 1000)), 22, WHITE, topleft=(gx, gy + GRID_H * cell + r.u(14)))
+        y = gy + FACE_N * cell + r.u(10)
+        if k > 0:
+            r.text(t("x4_step", n=int(k * 1000)), 18, WHITE, topleft=(gx, y))
 
-        # scores: the right answer falls, the wrong answer rises
-        bw = GRID_W * cell
-        by = gy + GRID_H * cell + r.u(60)
+        # magnifier: one pixel and its three numbers (step 1: a face pixel; later: a frame pixel, before -> now)
+        y += r.u(28)
+        n = int(el / MAGNIFY_TIME)
+        if not glasses:
+            row, col = self.frame_row + 1, (3, 12, 7)[n % 3]
+            rgb = tuple(int(v) for v in self.face_cells[row, col])
+            line = t("x4_pixel", r=rgb[0], g=rgb[1], b=rgb[2])
+        else:
+            i = (n * 7) % len(FRAME_CELLS)
+            row, col = FRAME_CELLS[i][0] + self.frame_row, FRAME_CELLS[i][1]
+            rgb = colors[i]
+            line = t("x4_change", r0=FRAME_START[0], g0=FRAME_START[1], b0=FRAME_START[2],
+                     r=rgb[0], g=rgb[1], b=rgb[2])
+        spot = pygame.Rect(gx + col * cell, gy + row * cell, cell - 1, cell - 1)
+        pygame.draw.rect(r.screen, YELLOW, spot.inflate(r.u(6), r.u(6)), r.u(3))
+        swatch = pygame.Rect(gx, y, r.u(34), r.u(34))
+        pygame.draw.rect(r.screen, rgb, swatch)
+        pygame.draw.rect(r.screen, WHITE, swatch, 2)
+        r.text(line, 18, WHITE, midleft=(swatch.right + r.u(12), swatch.centery))
+
+        # scores: the right answer falls, the wrong answer rises (from step 3)
+        by = y + r.u(48)
+        bw = FACE_N * cell
         s = k ** 0.7
         for label, value, color in ((t("x4_score_you"), 0.92 - 0.84 * s, GREEN),
                                     (f"Score: {t('panda')}", 0.03 + 0.82 * s, RED)):
-            r.text(label, 20, WHITE, topleft=(gx, by))
-            r.bar(pygame.Rect(gx, by + r.u(28), bw, r.u(22)), value, color)
-            by += r.u(70)
-        r.text(t("x4_illustration"), 16, YELLOW, topleft=(gx, by + r.u(4)))
+            r.text(label, 18, WHITE, topleft=(gx, by))
+            r.bar(pygame.Rect(gx + r.u(130), by, bw - r.u(130), r.u(20)), value, color)
+            by += r.u(32)
+        r.text(t("x4_illustration"), 16, YELLOW, topleft=(gx, by + r.u(2)))

@@ -139,6 +139,10 @@ class OperatorPanel:
             self._text(v, self.f, c, (card.x + 130, card.y + 9 + i * 30))
 
         y = card.bottom + 12
+        if app.board_showing():   # a leaderboard on screen: one click (or ESC) closes it
+            self._button((x, y, w, 50), "Close leaderboard on screen", action=app.close_board,
+                         color=(40, 140, 80), hint="ESC")
+            y += 58
         action = app.stage.action_label(app)
         if action:
             self._button((x, y, w, 50), action, key=pygame.K_SPACE, color=BTN_MAIN, hint="SPACE")
@@ -160,20 +164,23 @@ class OperatorPanel:
             self._button((x, y, w, 36), "Hide instructions" if holder.instructions else "Show instructions",
                          key=pygame.K_i, color=BTN_ON if holder.instructions else BTN, hint="I")
             y += 44
-        if hasattr(app.stage, "explain"):  # stages 3 and 4
-            self._button((x, y, w, 36), "Hide explanation" if app.stage.explain else "Show explanation",
+        if hasattr(app.stage, "explain") and getattr(app.stage, "game", None) is None:  # stage 2 (free), 3, 4
+            exp = app.stage.explain
+            label = {"old": "Explanation: old AI  (E: new AI)", "new": "Explanation: new AI  (E: close)",
+                     None: "Show explanation (old AI first)"}.get(exp) if not isinstance(exp, bool)                 else ("Hide explanation" if exp else "Show explanation")
+            self._button((x, y, w, 36), label,
                          key=pygame.K_e, color=BTN_ON if app.stage.explain else BTN, hint="E")
             y += 44
 
         for row in ((("< Previous", pygame.K_LEFT, "LEFT"), ("Next >", pygame.K_RIGHT, "RIGHT")),
                     (("Attract mode", pygame.K_ESCAPE, "ESC"), ("Panda backup", pygame.K_p, "P")),
                     (("Language NL/EN", pygame.K_l, "L"), ("Next camera", pygame.K_c, "C")),
-                    (("Overlays", pygame.K_o, "O"), ("Fullscreen", pygame.K_f, "F"), ("Debug", pygame.K_d, "D"),
-                     ("Scores", pygame.K_v, "V"))):
+                    (("Overlays", pygame.K_o, "O"), ("QR", pygame.K_k, "K"), ("Full", pygame.K_f, "F"),
+                     ("Debug", pygame.K_d, "D"), ("Scores", pygame.K_v, "V"))):
             bw = (w - 10 * (len(row) - 1)) // len(row)
             for i, (label, key, hint) in enumerate(row):
                 on = ((key == pygame.K_d and app.debug) or (key == pygame.K_v and config.SHOW_SCORES)
-                      or (key == pygame.K_o and app.overlays))
+                      or (key == pygame.K_o and app.overlays) or (key == pygame.K_k and app.show_qr))
                 self._button((x + i * (bw + 10), y, bw, 40), label, key=key, hint=hint, color=BTN_ON if on else BTN)
             y += 48
 
@@ -266,6 +273,10 @@ class OperatorPanel:
                              action=lambda en=e: app.board.remove(en))
                 y += 38
             y += 14
+        if app.board_showing():
+            self._button((x, y, w, 34), "Close leaderboard on screen", action=app.close_board,
+                         color=(40, 140, 80), hint="ESC")
+            y += 42
         self._text("x = delete an entry (for example a rude team name)", self.f_small, DIM, (x, y))
         y += 34
         self._button((x, y, w, 40), "Empty today's leaderboards", key=None, color=BTN_DANGER,

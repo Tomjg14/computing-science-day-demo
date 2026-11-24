@@ -72,7 +72,7 @@ class RoundGame:
             return
         entry = app.board.add(self.game_id, name, self.result["score"], self.result["detail"])
         self.result = None
-        app.show_board(self.game_id, 8, highlight=entry)
+        app.show_board(self.game_id, 5, highlight=entry)
 
     def update(self, app, det, now, dt):
         self.observe(app, det, now, dt)

@@ -16,6 +16,7 @@ from ..draw import GREEN, WHITE, YELLOW
 from ..players import is_big, rank_objects
 from ..texts import object_name, t
 from .base import Stage
+from .detect_explain import DetectExplainer
 
 ORANGE = (255, 140, 40)
 MAX_FOUND = 8
@@ -38,6 +39,17 @@ class DetectStage(Stage):
         self.streak = {}   # track id -> frames in a row this object was seen
         self.stable = []
         self.game = None   # None = free detection, else one of the detection games
+        if self.explainer is None:
+            self.explainer = DetectExplainer()
+        self.explainer.preload()
+        self.explainer.on = False
+
+    explainer = None       # how YOLO finds objects (key E in free detection); made once, it loads a model
+
+    @property
+    def explain(self):
+        """True while the explanation shows (for the operator panel); only in free detection."""
+        return self.explainer is not None and self.explainer.on and self.game is None
 
     def action_label(self, app):
         return self.game.action_label() if self.game else None
@@ -45,9 +57,13 @@ class DetectStage(Stage):
     def on_key(self, key, app):
         if key in GAME_KEYS:
             self.game = GAME_KEYS[key](app)
+            self.explainer.on = False
             return True
         if key == pygame.K_0:
             self.game = None
+            return True
+        if key == pygame.K_e and self.game is None:
+            self.explainer.toggle(app.now)
             return True
         return self.game.on_key(key, app) if self.game else False
 
@@ -63,10 +79,15 @@ class DetectStage(Stage):
             self.found[o.name] = max(o.conf, self.found.get(o.name, 0.0))
         if self.game:
             self.game.update(app, det, now, dt)
+        else:
+            self.explainer.update(app)
 
     def draw(self, r, app, det, now):
         if self.game:
             self.game.draw(r, app, det, now)
+            return
+        if self.explain:
+            self.explainer.draw(r, app, now)
             return
         for f in det.faces:
             if f.conf >= config.FACE_VISIBLE_CONF and is_big(f, det.frame_w):

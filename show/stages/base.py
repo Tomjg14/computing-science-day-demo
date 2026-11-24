@@ -45,8 +45,9 @@ class Stage:
         r.text(t(self.title_key), 26, WHITE, midleft=(x, h // 2))
         el = app.now - app.stage_start
         fade = 1.0 if el < config.SUBTITLE_TIME - 1 else max(0.0, config.SUBTITLE_TIME - el)
-        if fade > 0 and getattr(self, "game", None) is None:  # a game has its own task line there
-            r.text(t(self.sub_key), 20, WHITE, bold=False, alpha=int(255 * fade), topleft=(r.u(20), h + r.u(6)))
+        if fade > 0 and getattr(self, "game", None) is None and not getattr(self, "explain", None):
+            # a game has its own task line there, and an explanation its own title
+            r.text(t(self.sub_key), 20, WHITE, alpha=int(255 * fade), topleft=(r.u(20), h + r.u(6)))
 
 
 def draw_faces(r, det, skip=(), scores=None):

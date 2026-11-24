@@ -75,7 +75,7 @@ class Renderer:
         img.set_alpha(alpha)
         r = img.get_rect(**pos)
         if shadow:
-            off = self.u(3)
+            off = self.u(min(3, max(1, round(size / 9))))  # small text: a closer shadow, so it reads as an edge
             back = f.render(s, True, BLACK)
             back.set_alpha(alpha)
             self.screen.blit(back, r.move(off, off))
