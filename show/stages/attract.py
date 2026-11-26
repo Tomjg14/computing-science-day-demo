@@ -44,7 +44,7 @@ class AttractStage(Stage):
         invites = t("invites")
         invite = invites[int(now / config.INVITE_SWITCH) % len(invites)]
         r.text(invite, 64, WHITE, center=(sw // 2, sh - r.u(95)))
-        r.text(t("faces_today", n=len(app.stats["faces_seen"])), 26, YELLOW, center=(sw // 2, sh - r.u(32)))
+        r.text(t("faces_today", n=app.faces_today.count), 26, YELLOW, center=(sw // 2, sh - r.u(32)))
 
         # now and then: a leaderboard with a challenge, on the right side
         games = app.board.games_with_entries()

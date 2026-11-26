@@ -11,6 +11,7 @@ frame pixel before and now. The pattern and the scores are not computed from a m
 they carry an ILLUSTRATION tag.
 """
 import math
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -18,14 +19,14 @@ import pygame
 from PIL import Image
 
 from .. import config
-from ..draw import CYAN, GREEN, RED, WHITE, YELLOW
+from ..draw import GREEN, RED, WHITE, YELLOW
 from ..players import is_big
 from ..texts import t
 from ..vision import crop_square
 from .base import Stage
+from .page_parts import STEPS, draw_steps
 
 MAX_PANDAS = 4
-STEP_TIME = 3.5        # explanation: seconds per step
 ILLUS_TIME = 10.0      # the pattern animation runs this long, then holds
 GRID_W, GRID_H = 16, 6     # the glasses frame
 FACE_N = 16                # the face: FACE_N x FACE_N pixel blocks
@@ -74,7 +75,7 @@ def eye_points(face):
 
 
 class PandaStage(Stage):
-    name = "4 simulated attack"
+    name = "simulated attack"
     title_key = "s4_title"
     sub_key = "s4_sub"
 
@@ -85,12 +86,10 @@ class PandaStage(Stage):
         if self.glasses is None:
             self.glasses = load_glasses()
         self.explain = False         # the "how is it made" explanation (key E)
-        self.explain_start = 0.0
 
     def on_key(self, key, app):
         if key == pygame.K_e:
             self.explain = not self.explain
-            self.explain_start = app.now
             if self.explain:
                 self._take_face(app)
             return True
@@ -100,10 +99,15 @@ class PandaStage(Stage):
         """One image of the largest face as FACE_N x FACE_N color blocks, and the row of the eyes.
         No face: gray blocks, eyes at the usual height."""
         self.face_cells, self.frame_row = np.full((FACE_N, FACE_N, 3), 110, np.uint8), 5
-        faces = self.targets(app.det) if app.det is not None else []
-        if not faces or app.frame is None:
+        lock = app.face_lock             # the explanation face; else the largest target
+        faces = app.det.faces if app.det is not None else []
+        if lock.locked:   # with its eye points when it is in view now; else only its last place
+            f = next((g for g in faces if g.id is not None and g.id == lock.id), None)                 or SimpleNamespace(box=lock.box, kpts=None)
+        else:
+            targets = self.targets(app.det) if app.det is not None else []
+            f = targets[0] if targets else None
+        if f is None or app.frame is None:
             return
-        f = faces[0]
         crop = crop_square(app.frame, f.box, margin=FACE_MARGIN)
         if crop.size == 0:
             return
@@ -137,7 +141,7 @@ class PandaStage(Stage):
 
         sw, sh = r.size
         if self.explain:
-            self._draw_explain(r, now - self.explain_start)
+            self._draw_explain(r, now)
             return
 
         # the story of the paper, on the right (the SIMULATION tag on each box always stays)
@@ -153,35 +157,27 @@ class PandaStage(Stage):
         r.text("Sharif et al. (2016)", 16, (200, 200, 200), shadow=False, bold=False,
                bottomright=(panel.right - r.u(14), panel.bottom - r.u(8)))
 
-    def _draw_explain(self, r, el):
-        """Steps on the left, one by one; the face and the glasses pattern on the right."""
+    def _draw_explain(self, r, now):
+        """Steps on the left, one at a time (the presenter shows the next one); the face and the
+        glasses pattern on the right."""
         sw, sh = r.size
         r.shade(pygame.Rect(0, 0, sw, sh), 205)
-        x, y, w = r.u(50), r.top + r.u(24), r.u(620)
-        r.text(t("x4_title"), 34, CYAN, topleft=(x, y))
-        y += r.u(56)
-        steps = t("x4_steps")
-        shown = min(len(steps), 1 + int(el / STEP_TIME))
-        for i in range(shown):
-            circle = (x + r.u(15), y + r.u(15))
-            pygame.draw.circle(r.screen, YELLOW, circle, r.u(15))
-            r.text(str(i + 1), 20, (0, 0, 0), shadow=False, center=circle)
-            for line in r.wrap(steps[i], 24, w - r.u(44)):
-                r.text(line, 24, WHITE, topleft=(x + r.u(44), y))
-                y += r.u(32)
-            y += r.u(14)
-        if el >= STEP_TIME * len(steps):
+        x, w = r.u(50), r.u(620)
+        steps = t("x4_steps" if config.EXPLAIN_DETAIL else "x4s_steps")
+        y, newest = draw_steps(r, t("x4_title"), steps, x, r.top + r.u(24), w, size=23)
+        if newest == len(steps) - 1:
             r.text(t("x4_end"), 26, YELLOW, topleft=(x, y + r.u(10)))
-        self._draw_face_pattern(r, el)
+        self._draw_face_pattern(r, now, newest)
 
-    def _draw_face_pattern(self, r, el):
-        """Step 1: the face as pixel blocks. Step 2: a plain glasses frame on top, the face fades.
-        From step 3: the frame pixels change into a pattern; the scores move with them."""
+    def _draw_face_pattern(self, r, el, newest):
+        """Before step 2: the face as pixel blocks. Step 2: a plain glasses frame on top, the face
+        fades. From step 3: the frame pixels change into a pattern; the scores move with them.
+        el: a running clock for the small changes and the magnifier."""
         sw, _ = r.size
         cell = r.u(24)
         gx, gy = sw - r.u(40) - FACE_N * cell, r.top + r.u(20)
-        glasses = el >= STEP_TIME                                      # from step 2
-        k = min(1.0, max(0.0, (el - 2 * STEP_TIME) / ILLUS_TIME))      # pattern progress, from step 3
+        glasses = newest >= 1                                                       # from step 2
+        k = min(1.0, STEPS.age(2, el) / ILLUS_TIME) if newest >= 2 else 0.0        # pattern progress, from step 3
         face = self.face_cells.astype(float)
         if glasses:
             face = face * 0.35 + 15                                     # the face fades to the background
@@ -205,7 +201,8 @@ class PandaStage(Stage):
         if k > 0:
             r.text(t("x4_step", n=int(k * 1000)), 18, WHITE, topleft=(gx, y))
 
-        # magnifier: one pixel and its three numbers (step 1: a face pixel; later: a frame pixel, before -> now)
+        # magnifier: one pixel and its three numbers (step 1: a face pixel; later: a frame pixel, before -> now);
+        # detailed only
         y += r.u(28)
         n = int(el / MAGNIFY_TIME)
         if not glasses:
@@ -218,12 +215,13 @@ class PandaStage(Stage):
             rgb = colors[i]
             line = t("x4_change", r0=FRAME_START[0], g0=FRAME_START[1], b0=FRAME_START[2],
                      r=rgb[0], g=rgb[1], b=rgb[2])
-        spot = pygame.Rect(gx + col * cell, gy + row * cell, cell - 1, cell - 1)
-        pygame.draw.rect(r.screen, YELLOW, spot.inflate(r.u(6), r.u(6)), r.u(3))
-        swatch = pygame.Rect(gx, y, r.u(34), r.u(34))
-        pygame.draw.rect(r.screen, rgb, swatch)
-        pygame.draw.rect(r.screen, WHITE, swatch, 2)
-        r.text(line, 18, WHITE, midleft=(swatch.right + r.u(12), swatch.centery))
+        if config.EXPLAIN_DETAIL:
+            spot = pygame.Rect(gx + col * cell, gy + row * cell, cell - 1, cell - 1)
+            pygame.draw.rect(r.screen, YELLOW, spot.inflate(r.u(6), r.u(6)), r.u(3))
+            swatch = pygame.Rect(gx, y, r.u(34), r.u(34))
+            pygame.draw.rect(r.screen, rgb, swatch)
+            pygame.draw.rect(r.screen, WHITE, swatch, 2)
+            r.text(line, 18, WHITE, midleft=(swatch.right + r.u(12), swatch.centery))
 
         # scores: the right answer falls, the wrong answer rises (from step 3)
         by = y + r.u(48)

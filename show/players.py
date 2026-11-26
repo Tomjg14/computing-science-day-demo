@@ -1,6 +1,7 @@
 """Players: people close to the screen, followed by their body so they stay known when the face disappears.
 
-The modern face model (YOLO) decides who joins. In stage 3 the active face detector decides
+The modern face model (YOLO) decides who joins. A face belongs to the body whose head area
+contains it (face_owner). In stage 3 the active face detector decides
 whether a player's face is seen: YOLO in hard mode, the Haar cascade in easy mode.
 """
 from . import config
@@ -62,27 +63,72 @@ def rank_objects(objs, players, min_conf=0.0):
     return sorted(objs, key=lambda o: (held_by(o, players) is None, -box_area(o.box)))
 
 
+def face_owner(face, bodies):
+    """The id of the body this face belongs to, or None. A face belongs to a body when its center
+    lies in the head area of the body box (the top config.HEAD_PART). With several such bodies,
+    the body whose center line is closest to the face wins (in body widths). So when two people
+    overlap, a face stays with its own body; a smaller box in front does not take it."""
+    cx, cy = (face.box[0] + face.box[2]) / 2, (face.box[1] + face.box[3]) / 2
+    best, best_cost = None, None
+    for b in bodies.values():
+        x1, y1, x2, y2 = b.box
+        w, h = max(1.0, x2 - x1), max(1.0, y2 - y1)
+        if not (x1 <= cx <= x2 and y1 <= cy <= y1 + config.HEAD_PART * h):
+            continue
+        cost = abs(cx - (x1 + x2) / 2) / w
+        if best is None or cost < best_cost:
+            best, best_cost = b.id, cost
+    return best
+
+
 def match_to_bodies(faces, bodies, strength):
-    """{body id: strongest face whose center lies in that body}. A face goes to the smallest
-    body box that contains its center."""
+    """{body id: strongest face that belongs to that body} (see face_owner)."""
     found = {}
     for f in faces:
-        cx, cy = (f.box[0] + f.box[2]) / 2, (f.box[1] + f.box[3]) / 2
-        best, best_area = None, None
-        for b in bodies.values():
-            x1, y1, x2, y2 = b.box
-            if x1 <= cx <= x2 and y1 <= cy <= y2:
-                area = (x2 - x1) * (y2 - y1)
-                if best is None or area < best_area:
-                    best, best_area = b.id, area
+        best = face_owner(f, bodies)
         if best is not None and (best not in found or strength(f) > strength(found[best])):
             found[best] = f
     return found
 
 
+def why_not_player(det, bodies, body_face, players):
+    """For the operator (debug): [(box, reason)] for each person in view who is not a player."""
+    out = []
+    for o in det.persons:
+        if o.id is None:
+            out.append((o.box, "no tracker ID yet"))
+    lost = {}   # body id -> a clear face in its head area that went to another body
+    for f in det.faces:
+        if f.conf < config.FACE_VISIBLE_CONF:
+            continue
+        owner = face_owner(f, bodies)
+        for bid, b in bodies.items():
+            if bid != owner and bid not in body_face and face_owner(f, {bid: b}) == bid:
+                lost[bid] = f
+    full = len(players) >= config.MAX_PLAYERS
+    for bid, b in bodies.items():
+        if bid in players:
+            continue
+        f = body_face.get(bid)
+        if f is None:
+            out.append((b.box, "face went to another body" if bid in lost else "no face in head area"))
+        elif not is_big(f, det.frame_w):
+            out.append((b.box, f"face too small ({f.width / det.frame_w:.0%} < {config.PLAYER_MIN_FACE:.0%})"))
+        elif f.conf < config.FACE_VISIBLE_CONF:
+            out.append((b.box, f"face score low ({f.conf:.0%} < {config.FACE_VISIBLE_CONF:.0%})"))
+        elif full:
+            out.append((b.box, f"game full ({len(players)}/{config.MAX_PLAYERS})"))
+    used = {id(f) for f in body_face.values()}
+    for f in det.faces:
+        if id(f) not in used and f.conf >= config.FACE_VISIBLE_CONF and is_big(f, det.frame_w)                 and face_owner(f, bodies) is None:
+            out.append((f.box, "face without a body box"))
+    return out
+
+
 class PlayerTracker:
     def __init__(self):
         self.players = {}
+        self.why_not = []       # [(box, reason)] for people in view who are not players (debug)
 
     def reset(self):
         self.players.clear()
@@ -112,3 +158,9 @@ class PlayerTracker:
                 p.body, p.face, p.haar_hits = None, None, 0
                 if now - p.last_seen > config.PLAYER_LOST_AFTER:
                     del self.players[bid]
+
+        # the limit went down (operator panel): the players with the smallest body leave first
+        while len(self.players) > config.MAX_PLAYERS:
+            smallest = min(self.players.values(), key=lambda p: box_area(p.body) if p.body else 0.0)
+            del self.players[smallest.body_id]
+        self.why_not = why_not_player(det, bodies, body_face, self.players)

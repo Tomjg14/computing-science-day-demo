@@ -24,6 +24,9 @@ SEG_CONF = 0.25
 FACE_DETECT_CONF = 0.20      # lowest face confidence the model reports
 FACE_VISIBLE_CONF = 0.50     # (live) a face counts as seen above this
 SHOW_SCORES = True           # (live, V) face scores on screen; off = stage 3 shows them only during a round
+FACE_COUNT_MIN_TIME = 2.0    # "about N faces today": a new face counts after this many seconds in view ...
+FACE_COUNT_MERGE_TIME = 5.0  # ... and not when it appears where a counted face was lost this recently ...
+FACE_COUNT_MERGE_DIST = 1.5  # ... within this many face widths (the tracker gave the same person a new id)
 OBJECT_CONF = 0.45           # lowest object confidence the model reports
 OBJECT_MIN_FRAMES = 5        # an object must be seen this many frames in a row before it is shown
 CONF_SURE = 0.80             # stage 2 colors: green from here
@@ -54,17 +57,36 @@ HUNT_ROUND_TIME = 45.0
 HUNT_MIN_CONF = 0.60         # an object counts as found from this confidence ...
 HUNT_STABLE = 3              # ... for this many detection updates in a row
 HUNT_SKIP_AFTER = 10.0       # seconds before the game moves on to the next object by itself
+EXTEND_TIME = 10.0           # X during a round: this many seconds more (stage 2 games and stage 3)
 LEADERBOARD_FILE = ROOT / "leaderboard.json"
 ATTRACT_BOARD_EVERY = 20.0   # attract mode: show a leaderboard every ... seconds
 ATTRACT_BOARD_TIME = 8.0     # ... for this long
 
 # --- players ---
 PLAYER_MIN_FACE = 0.07       # (live) face width / frame width to count as a player
-MAX_PLAYERS = 4
+MAX_PLAYERS = 6              # (live) pass-by show; at most len(draw.PLAYER_COLORS)
 PLAYER_LOST_AFTER = 1.0      # seconds without a body before a player is dropped
+HEAD_PART = 0.6              # a face belongs to a body when its center lies in this top part of the body box
+
+# --- explanations (key E) ---
+EXPLAIN_DETAIL = False       # (live, Shift+E) False = simple explanations for everyone, True = detailed ones
+FACE_LOCK_MATCH = 1.0        # the explanation face: a face this many face widths from its last place is the same face
+FACE_LOCK_HOLD = 0.4         # seconds the score of the explanation face stays when the model misses it
 
 # --- attract mode ---
 ATTRACT_MAX_BOXES = 12       # at most this many people get a box (the largest first)
+
+# --- group lesson (python -m show --lesson, or key G) ---
+LESSON_MAX_PLAYERS = 4       # (live) the focus group: at most this many players in the lesson
+OPENING_MAX_BOXES = 30       # opening chapter: at most this many people get a faint box
+OPENING_COUNT_TIME = 1.5     # "about N people": the middle value of the counts of this many seconds
+HIT_MEASURE_TIME = 2.0       # Hit the number: the AI counts faces this many seconds, the middle value counts
+HIT_COUNTDOWN_TIME = 3.0
+SOURCE_SIGN = "Eykholt et al., 2018"
+
+# --- test mode (python -m show --test, or key Y): a simulated group, to test without a group ---
+TEST_FACES = 8               # simulated people (body and face); Shift+, / Shift+. remove / add one
+TEST_FLICKER = 0.10          # chance that the AI misses a simulated face or body in one update
 
 # --- show flow ---
 IDLE_RETURN = 30.0           # seconds with nobody in view -> attract mode

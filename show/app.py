@@ -16,21 +16,28 @@ os.environ.setdefault("SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS", "0")
 import pygame  # noqa: E402  (the setting above must come before SDL starts)
 
 from . import config
-from .draw import GREEN, RED, WHITE, YELLOW, Renderer
+from .draw import GREEN, PLAYER_COLORS, RED, WHITE, YELLOW, Renderer
+from .facecount import FaceCounter
+from .facelock import FaceLock
 from .leaderboard import Leaderboard, draw_board
 from .panel import PANEL_H, PANEL_W, OperatorPanel
 from .players import PlayerTracker
 from .stages.attract import AttractStage
 from .stages.detect import DetectStage
 from .stages.evasion import EvasionStage
+from .stages.hitnumber import HitNumberStage
+from .stages.lesson import ClosingStage, DetectExplainStage, HideStage, OpeningStage, SignStage
 from .stages.panda import PandaStage
+from .stages.page_parts import STEPS
 from .stages.pixels import PixelStage
+from .testmode import FakeFaces, is_fake
 from .texts import LANG, t, toggle_language
 from .vision import Camera, Segmenter, VisionEngine, VisionThread
 
-PANDA_INDEX = 3
 PANEL_FPS = 20
-LIMITS = {"PLAYER_MIN_FACE": (0.02, 0.30), "FACE_VISIBLE_CONF": (0.20, 0.90), "HAAR_MIN_HITS": (2, 40)}
+LIMITS = {"PLAYER_MIN_FACE": (0.02, 0.30), "FACE_VISIBLE_CONF": (0.20, 0.90), "HAAR_MIN_HITS": (2, 40),
+          "MAX_PLAYERS": (1, len(PLAYER_COLORS))}
+ORANGE = (255, 140, 40)
 
 
 def pick_show_display():
@@ -43,7 +50,7 @@ def pick_show_display():
 
 
 class App:
-    def __init__(self, camera_id):
+    def __init__(self, camera_id, lesson=False, test=False):
         pygame.init()
         self.show_display = pick_show_display()
         self.fullscreen = self.show_display is not None or config.START_FULLSCREEN
@@ -68,7 +75,9 @@ class App:
 
         self.qr = pygame.image.load(str(config.QR_FILE)).convert() if config.QR_FILE.exists() else None
         self.players = PlayerTracker()
-        self.stats = {"faces_seen": set(), "invisible": 0}  # counts only, no face data
+        self.faces_today = FaceCounter()   # an estimate; ids and boxes only, no face data
+        self.face_lock = FaceLock()        # the face the explanation pages follow (TAB: next face)
+        self.stats = {"invisible": 0}
         self.board = Leaderboard()
         self.board_overlay = None     # (game, until, highlighted entry)
         self.text_input = None        # {'prompt', 'text', 'done'} while the operator types a team name
@@ -76,8 +85,18 @@ class App:
         self._clear_armed = 0.0
         self._quit_armed = 0.0
         self.attract = AttractStage()
-        self.stages = [PixelStage(), DetectStage(), EvasionStage(), PandaStage()]
+        pixels, detect, evasion, self.panda = PixelStage(), DetectStage(), EvasionStage(), PandaStage()
+        self.show_stages = [pixels, detect, evasion, self.panda]
+        # the group lesson uses the same stage objects where it can, so models load only once
+        self.lesson_stages = [OpeningStage(), pixels, DetectExplainStage(), detect, HideStage(), HitNumberStage(),
+                              self.panda, SignStage(), ClosingStage()]
+        self.max_players = {False: config.MAX_PLAYERS, True: config.LESSON_MAX_PLAYERS}
+        self.lesson = lesson
+        self.stages = self.lesson_stages if lesson else self.show_stages
+        config.MAX_PLAYERS = self.max_players[lesson]
         self.debug = False
+        self.fake = FakeFaces()       # test mode (Y): simulated faces
+        self.fake.on = test
         self.overlays = True          # header, info bars and QR code (O); game meters always show
         self.show_qr = True           # the QR code on its own (K)
         self.toast = None
@@ -107,16 +126,58 @@ class App:
     def lang_code(self):
         return LANG["current"]
 
+    def home_name(self):
+        return self.stages[0].name if self.lesson else "attract mode"
+
     def go(self, index):
-        """Switch stage; -1 is attract mode."""
+        """Switch stage; -1 is attract mode. The group lesson has no attract mode: its start is
+        the opening chapter, and after the last chapter it goes back to the opening."""
         if index >= len(self.stages):
             index = -1
+        if index < 0 and self.lesson:
+            index = 0
         self.index = index
+        if index < 0:
+            self.face_lock.reset()    # a new session: a new explanation face
         self.stage = self.attract if index < 0 else self.stages[index]
         self.stage_start = self.now
         self.stage.enter(self)
-        nxt = self.stages[index + 1].name if index + 1 < len(self.stages) else "attract mode"
+        nxt = self.stages[index + 1].name if index + 1 < len(self.stages) else self.home_name()
         print(f"[SHOW] now: {self.stage.name:<20} | RIGHT -> {nxt}")
+
+    def set_lesson(self, lesson):
+        """Switch between the pass-by show and the group lesson. Each keeps its own player limit."""
+        if lesson == self.lesson:
+            return
+        self.max_players[self.lesson] = config.MAX_PLAYERS
+        self.lesson = lesson
+        config.MAX_PLAYERS = self.max_players[lesson]
+        self.stages = self.lesson_stages if lesson else self.show_stages
+        self.go(-1)
+        self.tell_operator("Now: " + ("GROUP LESSON" if lesson else "PASS-BY SHOW"))
+
+    def toggle_explain_detail(self):
+        config.EXPLAIN_DETAIL = not config.EXPLAIN_DETAIL
+        STEPS.reset()   # other texts: start the page again with no steps
+        self.tell_operator("Explanations: " + ("DETAILED" if config.EXPLAIN_DETAIL else "SIMPLE"))
+
+    def explain_page(self):
+        """The explanation page on screen (None = none). A new page starts with no text steps."""
+        return getattr(self.stage, "explain", None) or None
+
+    def next_step(self):
+        if self.explain_page() and STEPS.next(self.now):
+            self.tell_operator(f"Explanation step {STEPS.shown} of {STEPS.total}")
+
+    def step_back(self):
+        if self.explain_page() and STEPS.back():
+            self.tell_operator(f"Explanation step {STEPS.shown} of {STEPS.total}")
+
+    def next_face(self):
+        if self.det is not None and self.face_lock.next(self.det.faces, self.now):
+            self.tell_operator("Explanations follow another face")
+        else:
+            self.tell_operator("No other face in clear view")
 
     def adjust(self, attr, delta):
         lo, hi = LIMITS[attr]
@@ -196,6 +257,9 @@ class App:
         if k == pygame.K_r and mod & pygame.KMOD_SHIFT:
             self.clear_today()
             return
+        if k == pygame.K_e and mod & pygame.KMOD_SHIFT:
+            self.toggle_explain_detail()
+            return
         if self.index < 0 and k == pygame.K_SPACE:
             self.go(0)
         elif k == pygame.K_RIGHT:
@@ -207,13 +271,32 @@ class App:
         elif k == pygame.K_ESCAPE:
             self.go(-1)
         elif k == pygame.K_p:
-            self.go(PANDA_INDEX)
+            self.go(self.stages.index(self.panda))
+        elif k == pygame.K_g:
+            self.set_lesson(not self.lesson)
+        elif k == pygame.K_y:
+            self.fake.on = not self.fake.on
+            self.tell_operator("Test mode (simulated faces): " + ("ON" if self.fake.on else "OFF"))
+        elif self.fake.on and k in (pygame.K_COMMA, pygame.K_PERIOD):
+            if mod & pygame.KMOD_SHIFT:
+                self.fake.remove_person() if k == pygame.K_COMMA else self.fake.add_person()
+            else:
+                self.fake.hide_one() if k == pygame.K_COMMA else self.fake.show_one()
+            self.tell_operator(f"Test mode: {self.fake.total} simulated people, "
+                               f"{self.fake.visible} faces in view")
         elif k == pygame.K_l:
             toggle_language()
             self.show_toast(t("language"))
+        elif k == pygame.K_TAB:
+            self.next_face()
+        elif k in (pygame.K_PAGEDOWN, pygame.K_n) and self.explain_page():   # N: team name when no page is open
+            self.next_step()
+        elif k == pygame.K_PAGEUP and self.explain_page():
+            self.step_back()
         elif k == pygame.K_c:
             self.vision.switch_camera()
             self.players.reset()
+            self.face_lock.reset()
             self.show_toast("...")
         elif k == pygame.K_f:
             self.fullscreen = not self.fullscreen
@@ -261,6 +344,7 @@ class App:
     # --- main loop ---
     def run(self):
         t_prev = time.time()
+        self._page = None
         last_seq, last_det_time, last_panel, last_cam = 0, t_prev, 0.0, -1
         video = None
         while True:
@@ -268,6 +352,10 @@ class App:
             dt, t_prev = self.now - t_prev, self.now
             for ev in pygame.event.get():
                 self.handle_event(ev)
+            page = (self.stage, self.explain_page())
+            if page != self._page:     # another explanation page: its text waits for the presenter
+                self._page = page
+                STEPS.reset()
             # the Haar cascade costs time, so it only runs where it plays
             self.vision.engine.haar_on = self.in_evasion() and config.EVASION_MODE == "easy"
 
@@ -279,6 +367,7 @@ class App:
             if seq != last_seq:  # a new detection result: update the game state once
                 last_seq = seq
                 self.frame, self.det = latest
+                self.det = self.fake.apply(self.det)
                 det_dt, last_det_time = self.now - last_det_time, self.now
                 self._on_detections(self.det, det_dt)
                 if self.toast and self.toast[0] == "...":
@@ -305,19 +394,19 @@ class App:
             self.clock.tick(config.SHOW_FPS)
 
     def _on_detections(self, det, dt):
-        for f in det.faces:
-            if f.id is not None and f.conf >= config.FACE_VISIBLE_CONF:
-                self.stats["faces_seen"].add(f.id)
+        self.faces_today.update([f for f in det.faces if f.conf >= config.FACE_VISIBLE_CONF and not is_fake(f)],
+                                self.now)
         if det.faces or det.persons:
             self.last_person = self.now
-        if self.index >= 0 and self.now - self.last_person > config.IDLE_RETURN:
+        if self.index >= 0 and not self.lesson and self.now - self.last_person > config.IDLE_RETURN:
             self.go(-1)
         self.players.update(det, self.now)
+        self.face_lock.update(det.faces, self.now)
         self.stage.update(self, det, self.now, dt)
 
     def draw_overlays(self, r, det):
         sw, sh = r.size
-        if self.overlays and self.show_qr and self.qr is not None and getattr(self.stage, "game", None) is None:
+        if self.overlays and self.show_qr and self.qr is not None and getattr(self.stage, "game", None) is None                 and not getattr(self.stage, "big_qr", False) and not getattr(self.stage, "explain", None):
             q = r.u(90)   # bottom-right corner, out of the way of the explanations; no QR over a game
             r.screen.blit(pygame.transform.smoothscale(self.qr, (q, q)), (sw - q - r.u(6), sh - q - r.u(6)))
         if self.board_overlay and self.now < self.board_overlay[1]:
@@ -335,7 +424,7 @@ class App:
             lines = [
                 f"screen {self.clock.get_fps():5.1f}  camera {self.camera.fps:5.1f}  AI {self.vision.fps:5.1f} fps   "
                 f"face {det.face_ms:5.1f} ms   objects {det.object_ms:5.1f} ms   haar {det.haar_ms:5.1f} ms",
-                f"stage {self.stage.name}   camera {self.camera.index}   stage 3 mode {config.EVASION_MODE}",
+                f"{'lesson' if self.lesson else 'show'}: {self.stage.name}   camera {self.camera.index}   stage 3 mode {config.EVASION_MODE}",
                 f"faces {len(det.faces)}  persons {len(det.persons)}  objects {len(det.objects)}"
                 f"  players {len(self.players.players)}",
                 f"[ ] player_min_face {config.PLAYER_MIN_FACE:.2f}   - = face_visible {config.FACE_VISIBLE_CONF:.2f}"
@@ -351,11 +440,18 @@ class App:
                        topleft=(pad.x + r.u(8), pad.y + r.u(5) + i * r.u(22)))
             for o in det.persons:
                 pygame.draw.rect(r.screen, RED, r.rect(o.box), 1)
+            for box, why in self.players.why_not:   # why this person is not a player
+                r.text(why, 15, ORANGE, bold=False, topleft=r.rect(box).move(r.u(4), r.u(4)).topleft)
+        if self.fake.on:   # always on screen, also with the overlays off: nobody may take it for real
+            self.fake.draw(r, det)
 
 
 def main():
-    camera_id = int(sys.argv[1]) if len(sys.argv) > 1 else config.CAMERA_ID
-    app = App(camera_id)
+    """python -m show [camera number] [--lesson] [--test]"""
+    args = sys.argv[1:]
+    rest = [a for a in args if not a.startswith("--")]
+    camera_id = int(rest[0]) if rest else config.CAMERA_ID
+    app = App(camera_id, lesson="--lesson" in args, test="--test" in args)
     try:
         app.run()
     except SystemExit:

@@ -29,6 +29,10 @@ class Stage:
         """What SPACE does in this stage, for the operator panel; None = nothing."""
         return None
 
+    def round_running(self, app):
+        """True while a timed round runs, so X can add time (for the operator panel)."""
+        return False
+
     def draw(self, r, app, det, now):
         pass
 
@@ -45,7 +49,7 @@ class Stage:
         r.text(t(self.title_key), 26, WHITE, midleft=(x, h // 2))
         el = app.now - app.stage_start
         fade = 1.0 if el < config.SUBTITLE_TIME - 1 else max(0.0, config.SUBTITLE_TIME - el)
-        if fade > 0 and getattr(self, "game", None) is None and not getattr(self, "explain", None):
+        if fade > 0 and self.sub_key and getattr(self, "game", None) is None and not getattr(self, "explain", None):
             # a game has its own task line there, and an explanation its own title
             r.text(t(self.sub_key), 20, WHITE, alpha=int(255 * fade), topleft=(r.u(20), h + r.u(6)))
 

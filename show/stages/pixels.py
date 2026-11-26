@@ -1,6 +1,9 @@
 """Stage 1 - What does the computer see? A still of one face turns into color pixels,
 and a magnifier shows that each pixel is three numbers: red, green and blue.
 
+Key E: what the AI does with these numbers (filter_page.py). Simple (default): the live camera
+image and its edges. Detailed (Shift+E): one real filter of the model on the pixels of the photo.
+
 The still lives in memory only and is dropped when the stage is left (ADR 0001).
 """
 import cv2
@@ -8,10 +11,11 @@ import numpy as np
 import pygame
 
 from .. import config
-from ..draw import WHITE, YELLOW
+from ..draw import GREY, WHITE, YELLOW
 from ..texts import t
 from ..vision import crop_square, largest_face
 from .base import Stage, draw_faces
+from .filter_page import FilterExplainer, SimpleFilter
 
 PHOTO_END = 1.5        # seconds: the plain photo
 PIXEL_END = 4.5        # the photo gets coarser until it reaches the grid size
@@ -39,22 +43,52 @@ def to_surface(rgb):
 
 
 class PixelStage(Stage):
-    name = "1 pixel grid"
+    name = "pixel grid"
     title_key = "s1_title"
     sub_key = "s1_sub"
 
     def enter(self, app):
         self.photo = None
         self.t0 = 0.0
+        if self.explainer is None:
+            PixelStage.explainer = FilterExplainer()
+            PixelStage.simple = SimpleFilter()
+        self.explainer.preload()
+        self.explainer.close()
+        self.explaining = False
+
+    explainer = None       # the detailed filter explanation (key E); made once, it loads the model
+    simple = None          # the simple one
+
+    @property
+    def explain(self):
+        """The explanation page on screen: "filter" or None (for the operator panel)."""
+        return "filter" if self.explaining else None
+
+    def _explain(self, on, now):
+        self.explaining = on
+        if on:
+            self.simple.open(now)
+            if self.photo is not None:
+                self.explainer.open(now, self.photo, self.cells)
+        else:
+            self.explainer.close()
 
     def action_label(self, app):
         return "Take photo" if self.photo is None else "New photo"
 
     def on_key(self, key, app):
+        if key == pygame.K_e:
+            self._explain(not self.explaining, app.now)
+            return True
         if key == pygame.K_SPACE:
-            face = largest_face(app.det.faces, config.FACE_VISIBLE_CONF) if app.det else None
-            if face is not None:
-                crop = crop_square(app.frame, face.box)
+            self._explain(False, app.now)
+            box = app.face_lock.box if app.face_lock.conf is not None else None   # the explanation face
+            if box is None and app.det:
+                face = largest_face(app.det.faces, config.FACE_VISIBLE_CONF)
+                box = face.box if face is not None else None
+            if box is not None:
+                crop = crop_square(app.frame, box)
                 if crop.size:
                     g = config.PIXEL_GRID
                     self.photo = cv2.cvtColor(cv2.resize(crop, (480, 480)), cv2.COLOR_BGR2RGB)
@@ -65,11 +99,22 @@ class PixelStage(Stage):
             return True
         if key == pygame.K_BACKSPACE:
             self.photo = None
+            self._explain(False, app.now)
             return True
         return False
 
     def draw(self, r, app, det, now):
         sw, sh = r.size
+        if self.explain and not config.EXPLAIN_DETAIL:
+            self.simple.draw(r, now)
+            return
+        if self.explain and self.explainer.on:
+            self.explainer.draw(r, now)
+            return
+        if self.explain:   # the detailed page needs the photo
+            r.shade(pygame.Rect(0, 0, sw, sh), 235)
+            r.text(t("x1_need_photo"), 30, YELLOW, center=(sw // 2, sh // 2))
+            return
         if self.photo is None:
             draw_faces(r, det)
             if app.overlays:
@@ -149,3 +194,8 @@ class PixelStage(Stage):
         if lens_el >= SPOT_TIME * len(self.spots):
             end_y = box.bottom + r.u(40) + r.u(34) + r.u(110) + r.u(14)
             r.text(t("s1_end"), 30, YELLOW, topleft=(tx, end_y))
+            r.text(t("x1_open"), 18, GREY, topleft=(tx, end_y + r.u(44)))
+
+    def update(self, app, det, now, dt):
+        if self.explaining:
+            self.simple.update(app.frame)

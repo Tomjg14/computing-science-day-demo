@@ -17,12 +17,49 @@ Een webcam en een groot scherm laten in vier stappen zien hoe een computer naar 
 | Stap | Wat zie je? | Wat leer je? |
 |---|---|---|
 | **Wachtscherm** | Uitnodiging en het scorebord van vandaag | – |
-| **1. Wat ziet de computer?** | Een foto van je gezicht wordt pixels, en elke pixel wordt drie getallen (rood, groen, blauw). | Voor een computer is een foto alleen getallen. |
+| **1. Wat ziet de computer?** | Een foto van je gezicht wordt pixels, en elke pixel wordt drie getallen (rood, groen, blauw). Met **E**: hoe een filter randen vindt, live (uitgebreid: een echt filter van het model op de pixels van de foto). | Voor een computer is een foto alleen getallen. Filters maken er aanwijzingen van, zoals randen. |
 | **2. Hoe zeker is de computer?** | Gezichten en voorwerpen met een zekerheidsscore. Met vier spellen: *Bedrieg de AI!*, *Wat denkt de AI?*, *Speurtocht* en *Verwarringsmeter*. | Een AI geeft een score, geen zekerheid, en raakt snel in de war. |
-| **3. Verstop je voor de AI!** | Spel: de AI ziet je lichaam, maar niet je gezicht = onzichtbaar. Makkelijk (oude AI uit 2001) of moeilijk (moderne AI). | Waarom de oude AI makkelijker te foppen is dan de moderne. |
+| **3. Verstop je voor de AI!** | Spel: de AI ziet je lichaam, maar niet je gezicht = onzichtbaar. Makkelijk (oude AI uit 2001) of moeilijk (moderne AI). Eerst met **E**: waarom de AI een gezicht kan missen, met de live gezichtsscore en metingen van je gezicht. | Waarom een AI een gezicht mist, en waarom de oude AI makkelijker te foppen is dan de moderne. |
 | **4. Zo doen onderzoekers het** | Een *simulatie* van de bril uit het onderzoek, met uitleg hoe zo'n bril gemaakt wordt. | Kleine veranderingen op de juiste plek kunnen een AI foppen. |
 
 De show draait helemaal op je eigen computer. Hij slaat geen foto's of video's op (zie [Privacy](#-privacy)).
+
+---
+
+## 🎓 Groepsles (20–30 leerlingen)
+
+Naast de show voor voorbijgangers heeft de demo een tweede variant: een les van ongeveer 20–25 minuten voor één groep.
+De groep staat in een halve cirkel voor het scherm. Een paar vrijwilligers staan vooraan en spelen mee; de hele groep speelt het groepsspel.
+
+```bash
+python -m show --lesson
+```
+
+Of druk tijdens de show op **G** (of op de knop in het paneel) om te wisselen. De show voor voorbijgangers verandert hier niet door.
+
+| Hoofdstuk | Wat zie je? |
+|---|---|
+| **1. Opening** | De AI telt de groep: "Ik zie ongeveer 27 mensen". Iedereen krijgt een dun, licht kader; de spelers vooraan een gewoon kader. |
+| **2. Pixels** | Stap 1 van de show. Daarna **E**: hoe een filter randen vindt (uitgebreid: één echt filter van het model op de pixels van de foto). |
+| **3. Hoe herkent de AI dingen?** | Drie uitlegpagina's, live met echte getallen: de oude AI (2001), de moderne AI (lagen met filters), en hoe de aanwijzingen een kader worden. **E** gaat naar de volgende pagina; na de laatste sluit **E** de uitleg. **Page Down** toont de tekst stap voor stap. |
+| **4. Hoe zeker is de computer?** | Stap 2 van de show, met de vier spellen. *Wat denkt de AI?* werkt goed met de hele groep. |
+| **5. Verstop je voor de AI!** | Eerst de pagina *Waarom kan de AI een gezicht missen?* (**E** sluit hem), dan stap 3 van de show, met de vrijwilligers vooraan. |
+| **6. Raak het getal!** | Het groepsspel (zie hieronder). |
+| **7. De bril** | Stap 4 van de show (een *simulatie*). |
+| **8. Verkeersbord** | Een eigen tekening van een stopbord met stickers: hetzelfde idee in een ander voorbeeld. Een *illustratie*: geen model kijkt ernaar. Bron: Eykholt et al. (2018). |
+| **9. Afsluiting** | Bedankt, en een grote QR-code. |
+
+**Raak het getal!** De AI moet precies een doelgetal aan gezichten tellen. De groep beslist wie zijn gezicht verstopt.
+
+1. Iedereen kijkt in de camera. Elk gezicht dat de AI ziet, krijgt een stip. **SPATIE** meet het maximum. Gezichten die de camera niet ziet, tellen niet mee, dus elk doel is haalbaar.
+2. Het doel begint op het maximum min 1. Pas het aan met **↑ / ↓** of in het paneel.
+3. De groep overlegt. Klaar? **SPATIE** start het aftellen. Dan telt de AI 2 seconden lang; het middelste getal telt, zodat één flikkering niet beslist.
+4. Het beeld bevriest, met een stip op elk getelde gezicht en de uitslag. **SPATIE**: volgende ronde. **BACKSPACE**: maximum opnieuw meten.
+
+Het spel bewaart geen scores. De les heeft geen wachtscherm: hij begint bij de opening, en na de afsluiting gaat hij terug naar de opening. Is er even niemand in beeld, dan blijft de les gewoon staan.
+Het aantal spelers vooraan (standaard 4) stel je in het paneel in bij *Max players*.
+
+**Testen zonder groep.** `python -m show --lesson --test` (of **Y**) voegt een gesimuleerde groep toe aan de resultaten van de AI: elke persoon heeft een lichaam en een gezicht. **,** verstopt één gezicht, **.** laat er weer één zien; het lichaam blijft, net als in het echte spel. **Shift+,** / **Shift+.** haalt een hele persoon weg of voegt er een toe. Zolang de testmodus aan staat, staat er een rood label op het scherm. De begingrootte van de groep staat in `show/config.py` (`TEST_FACES`).
 
 ---
 
@@ -113,19 +150,98 @@ python -m show 1
 
 ---
 
+## 👩‍🏫 Voor de docent of presentator
+
+Dit deel is voor wie de demo geeft. Het vertelt welke versie je kiest, wat je voorbereidt en hoe je de uitleg leidt.
+
+### Twee versies
+
+| | **Show voor voorbijgangers** | **Groepsles** |
+|---|---|---|
+| Voor | Een stand op een open dag: mensen lopen langs, kijken en spelen mee | Eén klas van 20–30 leerlingen, ongeveer 20–25 minuten |
+| Starten | `python -m show` | `python -m show --lesson` |
+| Verloop | Wachtscherm → **SPATIE** → stap 1–4 | Hoofdstuk 1–9, van de opening tot de afsluiting |
+| Spelers | Tot 6 spelers in beeld | Een paar vrijwilligers vooraan (standaard 4), plus groepsspellen voor iedereen |
+| 30 s niemand in beeld | Terug naar het wachtscherm | Blijft waar hij is |
+
+Druk op **G** (of op de knop in het paneel) om tijdens de show te wisselen tussen de twee versies.
+
+### Twee niveaus van uitleg
+
+Alle uitlegpagina's (toets **E**) hebben twee niveaus:
+
+- **Eenvoudig** (standaard): één idee per pagina, in gewone taal, voor leerlingen zonder technische achtergrond.
+- **Uitgebreid**: meer stappen en de echte getallen (gewichten, testwaarden, de 5 hoogste scores). Goed voor oudere leerlingen of een technisch publiek.
+
+**Shift+E** (of *Level* in het paneel) wisselt alle uitleg tegelijk. Het verhaal is op beide niveaus hetzelfde:
+
+1. Voor een computer is een foto alleen getallen (pixels).
+2. Filters maken van die getallen aanwijzingen, zoals randen.
+3. De oude AI (2001) stelt vaste ja/nee-vragen en stopt bij het eerste NEE. De moderne AI heeft zijn filters zelf geleerd, telt veel aanwijzingen op en vindt alle voorwerpen in één keer kijken (YOLO).
+4. De AI kan een gezicht missen als hij te weinig aanwijzingen krijgt.
+5. Met kleine veranderingen op de juiste plek kun je een AI foppen. Onderzoekers doen dit om AI sterker en veiliger te maken.
+
+### Voordat je begint
+
+- **Camera en licht:** het licht valt op de gezichten, niet van achteren (geen raam achter de groep). Controleer het beeld met **C** (volgende camera).
+- **Schermen:** de show op het grote scherm, het bedieningspaneel op je laptop (zie [Opstelling](#️-opstelling-thuis-of-in-de-klas)).
+- **Taal:** **L** wisselt het scherm tussen Nederlands en Engels.
+- **Clicker:** de meeste presentatie-clickers sturen *Page Down*, en dat toont de volgende tekststap. Test dit eerst: sommige clickers sturen de pijltjestoetsen, en die wisselen de stap of het hoofdstuk.
+- **Groepsles:** zet *Max players* in het paneel, en plak een vak op de vloer voor de vrijwilligers.
+- **Alleen oefenen:** voeg `--test` toe (of druk op **Y**) voor een gesimuleerde groep. Zie [Testen zonder groep](#-groepsles-2030-leerlingen).
+
+### De uitleg leiden
+
+- **E** opent een uitlegpagina. Een pagina opent met alleen de titel en het live beeld. De tekst wacht op jou.
+- **Page Down** (of **N**, of de clicker) toont de volgende tekststap; **Page Up** gaat één stap terug. Niets gaat vanzelf verder, dus je kunt wachten op een goed beeld, op aandacht of op een vraag. De bolletjes onderaan tonen hoeveel stappen er zijn.
+- De pagina's volgen één gezicht: het dichtstbijzijnde, één keer gekozen. Ze wisselen nooit vanzelf naar een ander gezicht. **TAB** kiest het volgende gezicht, bijvoorbeeld als er een andere vrijwilliger komt.
+- Alles op de uitlegpagina's is live en komt uit de echte modellen. Delen die alleen een illustratie zijn (het vertraagde zoeken van de oude AI, het patroon van de bril) hebben een label op het scherm.
+
+### Groepsles: hoofdstuk voor hoofdstuk
+
+| # | Hoofdstuk | Wat doe je? |
+|---|---|---|
+| 1 | Opening: "Ik zie ongeveer N mensen" | Laat de groep binnenkomen en naar de telling kijken. |
+| 2 | Pixels | **SPATIE**: foto van een vrijwilliger; **BACKSPACE**: weer live beeld. **E**: hoe een filter randen vindt (live: laat de groep zwaaien). |
+| 3 | Hoe herkent de AI dingen? | De pagina over de oude AI opent vanzelf. **E**: moderne AI → van aanwijzingen naar een kader → sluiten (daarna vrije detectie). |
+| 4 | Hoe zeker is de computer? | **1** Bedrieg, **2** Raad (hele groep), **3** Speurtocht, **4** Verwarring, **0** vrij. **I**: uitlegkaart van het spel. |
+| 5 | Waarom de AI mist + Verstop je voor de AI! | De pagina *Waarom kan de AI een gezicht missen?* opent vanzelf: laat een vrijwilliger het gezicht bedekken, draaien en naar achteren stappen. **E** sluit hem. **SPATIE**: start een ronde. **M**: makkelijk / moeilijk. |
+| 6 | Raak het getal! | **SPATIE**: meet het maximum. **↑ / ↓**: doel. **SPATIE**: aftellen. **SPATIE**: volgende ronde. |
+| 7 | De bril (simulatie) | **E**: hoe de bril gemaakt wordt, en waarom onderzoekers dit doen. |
+| 8 | Verkeersbord (illustratie) | Hetzelfde idee in een ander voorbeeld. |
+| 9 | Afsluiting | De QR-code naar de website (**K**: aan / uit). |
+
+### Als er iets misgaat
+
+- **Een vrijwilliger wordt geen speler:** druk op **D** (debug). Het paneel toont per persoon de reden. Vaak helpt een stap dichterbij, iets uit elkaar gaan staan, of recht in de camera kijken. Zet debug weer uit: de tekst staat ook op het grote scherm.
+- **De uitleg volgt het verkeerde gezicht:** druk op **TAB** tot het goede gezicht gekozen is.
+- **Stap 3 werkt niet in deze ruimte (licht, afstand):** druk op **P** om naar stap 4 te springen.
+- Meer problemen en oplossingen: zie [Problemen oplossen](#-problemen-oplossen).
+
+---
+
 ## 🎮 Tijdens de show
 
 | Toets | Wat doet het? |
 |---|---|
-| **SPATIE** | Start de sessie (wachtscherm) of de actie van de stap: foto maken, ronde starten. |
+| **SPATIE** | Start de sessie (wachtscherm) of de actie van de stap: foto maken, ronde starten. Tijdens een ronde: ronde nu stoppen en de score tonen (tijdens het aftellen: ronde afbreken). |
+| **X** | Tijdens een ronde (spel in stap 2, stap 3): 10 seconden extra. Nog eens drukken geeft meer tijd. |
 | **→ / ←** | Volgende / vorige stap. |
-| **ESC** | Terug naar het wachtscherm. Staat er een scorebord op het scherm, dan sluit ESC alleen dat. |
+| **G** | Wissel tussen de show voor voorbijgangers en de groepsles. |
+| **Y** | Testmodus aan / uit: een gesimuleerde groep, om de les zonder groep te testen. **,** / **.**: één gezicht verstoppen / weer laten zien. Met **Shift**: één persoon weghalen / toevoegen. |
+| **↑ / ↓** | *Raak het getal!*: doel één hoger / lager. |
+| **BACKSPACE** | Stap 1: terug naar het live beeld. *Raak het getal!*: maximum opnieuw meten. |
+| **ESC** | Terug naar het wachtscherm (groepsles: de opening). Staat er een scorebord op het scherm, dan sluit ESC alleen dat. |
 | **1 – 4 / 0** | Stap 2: kies een spel / terug naar vrij kijken. |
 | **I** | Uitleg "hoe speel je het" aan / uit. |
-| **E** | Uitleg, live met echte getallen. Stap 2: hoe YOLO voorwerpen vindt. Stap 3: oude AI → moderne AI → uit. Stap 4: hoe de bril gemaakt wordt. |
+| **Shift+E** | Alle uitleg: eenvoudig (standaard) / uitgebreid. |
+| **Page Down** / **N** | Uitleg open: toon de volgende tekststap (een presentatie-clicker stuurt Page Down). Een uitlegpagina opent met alleen de titel en het beeld; niets gaat vanzelf verder. |
+| **Page Up** | Uitleg open: één tekststap terug. |
+| **TAB** | De uitleg volgt een ander gezicht. De uitleg kiest één keer het dichtstbijzijnde gezicht en wisselt nooit vanzelf. |
+| **E** | Uitleg, live met echte getallen. Standaard eenvoudig (voor iedereen); **Shift+E** zet alle uitleg op uitgebreid. Stap 1: hoe een filter randen vindt (uitgebreid: na de foto, één filter op je pixels). Stap 2: oude AI → moderne AI → van aanwijzingen naar een kader → uit. Stap 3: waarom de AI een gezicht kan missen. Stap 4: hoe de bril gemaakt wordt. |
 | **M** | Stap 3: makkelijk (oude AI) / moeilijk (moderne AI). |
 | **V** | Scores op gezichten aan / uit (stap 3: alleen tijdens een ronde). |
-| **T** | Stap 2: volgend doel (*Bedrieg de AI!*, Shift+T: vorig doel) of volgend voorwerp (*Verwarringsmeter*; je kunt ook een voorwerp aanklikken in het paneel). |
+| **T** | Stap 2: volgend doel (*Bedrieg de AI!*, Shift+T: vorig doel) of kies één voorwerp (*Verwarringsmeter*; na het laatste nummer weer automatisch: alle vastgehouden voorwerpen tellen; je kunt ook een voorwerp aanklikken in het paneel). |
 | **O** | Overlays aan / uit: titelbalk, infobalken en QR-code. Spelmeters en tijd blijven staan. |
 | **K** | QR-code aan / uit. |
 | **P** | Direct naar stap 4 (reserve als stap 3 niet lukt). |
@@ -147,7 +263,7 @@ De belangrijkste instellingen staan in [`show/config.py`](show/config.py), met u
 
 - De AI rekent op je eigen computer: de camerabeelden gaan niet naar internet. Na de eerste download heeft de show geen internet meer nodig.
 - De show zet de anonieme gebruiksstatistieken van Ultralytics uit.
-- De show slaat **geen foto's of video's** op. De foto in stap 1 staat alleen in het geheugen en verdwijnt als je verdergaat.
+- De show slaat **geen foto's of video's** op. De foto in stap 1 staat alleen in het geheugen en verdwijnt als je verdergaat. Hetzelfde geldt voor het bevroren beeld van *Raak het getal!*: het verdwijnt bij de volgende ronde.
 - Het scorebord (`leaderboard.json`) bewaart alleen teamnamen en scores.
 
 ---
@@ -194,11 +310,14 @@ computing-science-day-demo/
 │   ├── panel.py           het bedieningspaneel
 │   ├── texts.py           alle schermteksten (Nederlands en Engels)
 │   ├── vision.py          camera en AI-modellen
-│   ├── players.py         wie speelt er mee (stap 3)
-│   ├── stages/            de stappen: wachtscherm, 1 pixels, 2 detectie, 3 verstoppen, 4 bril
+│   ├── players.py         wie speelt er mee, en waarom iemand (nog) geen speler is
+│   ├── testmode.py        een gesimuleerde groep, om zonder groep te testen (toets Y)
+│   ├── stages/            de stappen: wachtscherm, 1 pixels, 2 detectie, 3 verstoppen, 4 bril,
+│   │                      en de hoofdstukken van de groepsles (lesson.py, hitnumber.py)
 │   └── games/             de vier spellen van stap 2
 ├── assets/                plaatjes: de bril en de QR-code
 ├── docs/                  de website (GitHub Pages)
+├── tests/                 tests (spellogica; de filterpagina rekent als het model): python -m unittest discover -s tests -t .
 ├── requirements.txt       de Python-onderdelen
 ├── README.md              deze uitleg (Nederlands)
 └── README.en.md           deze uitleg (Engels)
@@ -217,6 +336,7 @@ De AI-modellen (`*.pt`) komen bij de eerste start vanzelf in de hoofdmap.
 | Het bedieningspaneel is weg | Het zit achter de show (volledig scherm). Druk op **F**, of gebruik gewoon de toetsen. |
 | De download van de modellen mislukt | Controleer de internetverbinding en start opnieuw. |
 | Verkeerd scherm | Zet `SHOW_DISPLAY` en `PANEL_DISPLAY` in `show/config.py`. |
+| Iemand vooraan wordt geen speler | Zet debug aan (**D**). Het paneel en het scherm tonen per persoon waarom die geen speler is. Vaak helpt: een stap dichterbij, iets uit elkaar gaan staan, recht in de camera kijken. Lukt het niet, loop dan even uit beeld en weer terug. |
 
 ---
 

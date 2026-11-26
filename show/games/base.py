@@ -1,5 +1,9 @@
 """Shared round logic of the detection games: wait -> countdown -> playing -> result,
-plus the team name and the leaderboard entry after a round."""
+plus the team name and the leaderboard entry after a round.
+
+During a round the operator can stop it early with SPACE (the result card shows the score so
+far, which the team can save) or give config.EXTEND_TIME seconds more with X. SPACE during the
+countdown cancels the round."""
 import math
 
 import pygame
@@ -27,6 +31,8 @@ class RoundGame:
         self.phase, self.phase_start = "wait", 0.0
         self.result = None    # {"score", "detail", "record"} of the last round, until it is saved
         self.instructions = True  # the "how to play" card shows until the first round starts
+        self.extra = 0.0          # seconds added to this round with X
+        self.extended_at = None   # time of the last X, for the short "+10 s" on screen
 
     # --- hooks for each game ---
     def start_round(self, now):
@@ -47,7 +53,17 @@ class RoundGame:
 
     # --- shared logic ---
     def action_label(self):
+        if self.phase == "countdown":
+            return "Cancel round"
+        if self.phase == "playing":
+            return "Stop round now (show score)"
         return f"Start round ({self.label})" if self.phase in ("wait", "result") else None
+
+    def round_running(self):
+        return self.phase == "playing"
+
+    def time_left(self, now):
+        return max(0.0, self.round_time + self.extra - (now - self.phase_start))
 
     def can_name(self):
         return self.phase in ("wait", "result") and self.result is not None and self.result["score"] > 0
@@ -59,8 +75,19 @@ class RoundGame:
         if key == pygame.K_SPACE and self.phase in ("wait", "result"):
             self.instructions = False
             self.result = None
+            self.extra, self.extended_at = 0.0, None
             self.start_round(app.now)
             self.phase, self.phase_start = "countdown", app.now
+            return True
+        if key == pygame.K_SPACE and self.phase == "countdown":
+            self.phase, self.phase_start = "wait", app.now
+            return True
+        if key == pygame.K_SPACE and self.phase == "playing":
+            self._finish(app, app.now)
+            return True
+        if key == pygame.K_x and self.phase == "playing":
+            self.extra += config.EXTEND_TIME
+            self.extended_at = app.now
             return True
         if key == pygame.K_n and self.can_name():
             app.start_text_input(t("team_prompt"), lambda name: self._save(app, name))
@@ -81,12 +108,16 @@ class RoundGame:
             self.phase, self.phase_start = "playing", now
         elif self.phase == "playing":
             self.play(app, det, now, dt)
-            if el >= self.round_time:
-                score, detail = self.score()
-                record = app.board.best(self.game_id)
-                self.result = {"score": score, "detail": detail,
-                               "record": score > 0 and (record is None or score > record["score"])}
-                self.phase, self.phase_start = "result", now
+            if self.time_left(now) <= 0:
+                self._finish(app, now)
+
+    def _finish(self, app, now):
+        """End the round (time is up, or the operator stopped it) and show the result card."""
+        score, detail = self.score()
+        record = app.board.best(self.game_id)
+        self.result = {"score": score, "detail": detail,
+                       "record": score > 0 and (record is None or score > record["score"])}
+        self.phase, self.phase_start = "result", now
 
     # --- shared drawing ---
     def draw_instructions(self, r):
@@ -110,8 +141,11 @@ class RoundGame:
             r.text(str(n), 200, YELLOW, center=(sw // 2, sh // 2 + r.u(40)))
             return True
         if self.phase == "playing":
-            left = max(0.0, self.round_time - el)
-            r.text(f"{left:4.1f}", 72, YELLOW if left > 5 else (240, 70, 70), topright=(sw - r.u(30), r.top + r.u(70)))
+            left = self.time_left(now)
+            timer = r.text(f"{left:4.1f}", 72, YELLOW if left > 5 else (240, 70, 70),
+                           topright=(sw - r.u(30), r.top + r.u(70)))
+            if self.extended_at is not None and now - self.extended_at < 1.5:
+                r.text(f"+{config.EXTEND_TIME:.0f} s", 40, GREEN, midtop=(timer.centerx, timer.bottom))
         if self.phase == "result" and self.result is not None:
             if app.text_input is None:  # while the team name is typed, only the name card shows
                 self.draw_result(r, sw, sh)

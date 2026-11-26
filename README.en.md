@@ -17,12 +17,49 @@ With a webcam and a big screen, it shows in four steps how a computer looks at i
 | Step | What do you see? | What do you learn? |
 |---|---|---|
 | **Attract screen** | An invitation and today's leaderboard | – |
-| **1. What does the computer see?** | A photo of your face turns into pixels, and every pixel turns into three numbers (red, green, blue). | To a computer, a photo is just numbers. |
+| **1. What does the computer see?** | A photo of your face turns into pixels, and every pixel turns into three numbers (red, green, blue). With **E**: how a filter finds edges, live (detailed: a real filter of the model on the pixels of the photo). | To a computer, a photo is just numbers. Filters turn them into clues, such as edges. |
 | **2. How sure is the computer?** | Faces and objects with a confidence score. With four games: *Fool the AI!*, *What does the AI think?*, *Scavenger hunt* and *Confusion meter*. | An AI gives a score, not certainty, and it gets confused easily. |
-| **3. Hide from the AI!** | Game: the AI sees your body but not your face = invisible. Easy (old AI from 2001) or hard (modern AI). | Why the old AI is easier to fool than the modern one. |
+| **3. Hide from the AI!** | Game: the AI sees your body but not your face = invisible. Easy (old AI from 2001) or hard (modern AI). With **E** first: why the AI can miss a face, with the live face score and measurements of your face. | Why an AI misses a face, and why the old AI is easier to fool than the modern one. |
 | **4. How researchers do it** | A *simulation* of the glasses from the research, with an explanation of how such glasses are made. | Small changes in the right place can fool an AI. |
 
 The show runs completely on your own computer. It stores no photos or videos (see [Privacy](#-privacy)).
+
+---
+
+## 🎓 Group lesson (20–30 students)
+
+Next to the show for passers-by, the demo has a second variant: a lesson of about 20–25 minutes for one group.
+The group stands in a half circle in front of the screen. A few volunteers stand in front and play; the whole group plays the group game.
+
+```bash
+python -m show --lesson
+```
+
+Or press **G** during the show (or the button in the panel) to switch. This does not change the show for passers-by.
+
+| Chapter | What do you see? |
+|---|---|
+| **1. Opening** | The AI counts the group: "I see about 27 people". Everyone gets a thin, faint box; the players in front get a normal box. |
+| **2. Pixels** | Step 1 of the show. Then **E**: how a filter finds edges (detailed: one real filter of the model on the pixels of the photo). |
+| **3. How does the AI recognize things?** | Three explanation pages, live with real numbers: the old AI (2001), the modern AI (layers of filters), and how the clues become a box. **E** goes to the next page; after the last page, **E** closes them. **Page Down** shows the text one step at a time. |
+| **4. How sure is the computer?** | Step 2 of the show, with the four games. *What does the AI think?* works well with the whole group. |
+| **5. Hide from the AI!** | First the page *Why can the AI miss a face?* (**E** closes it), then step 3 of the show, with the volunteers in front. |
+| **6. Hit the number!** | The group game (see below). |
+| **7. The glasses** | Step 4 of the show (a *simulation*). |
+| **8. Traffic sign** | Our own drawing of a stop sign with stickers: the same idea in another example. An *illustration*: no model looks at it. Source: Eykholt et al. (2018). |
+| **9. Closing** | Thank you, and a large QR code. |
+
+**Hit the number!** The AI must count exactly a target number of faces. The group decides who hides their face.
+
+1. Everyone looks at the camera. Each face the AI sees gets a dot. **SPACE** measures the maximum. Faces that the camera cannot see do not count, so every target is possible.
+2. The target starts at the maximum minus 1. Change it with **↑ / ↓** or in the panel.
+3. The group discusses. Ready? **SPACE** starts the countdown. Then the AI counts for 2 seconds; the middle value counts, so one flicker does not decide.
+4. The image freezes, with a dot on each counted face and the result. **SPACE**: next round. **BACKSPACE**: measure the maximum again.
+
+The game keeps no scores. The lesson has no attract screen: it starts at the opening, and after the closing it goes back to the opening. When nobody is in view for a while, the lesson stays where it is.
+Set the number of players in front (default 4) in the panel at *Max players*.
+
+**Test without a group.** `python -m show --lesson --test` (or **Y**) adds a simulated group to the AI results: each person has a body and a face. **,** hides one face, **.** shows one again; the body stays, as in the real game. **Shift+,** / **Shift+.** removes or adds a whole person. A red label stays on screen as long as the test mode is on. The start size of the group is in `show/config.py` (`TEST_FACES`).
 
 ---
 
@@ -113,19 +150,98 @@ python -m show 1
 
 ---
 
+## 👩‍🏫 For the instructor
+
+This section is for the person who gives the demo. It tells you which version to choose, what to prepare, and how to lead the explanations.
+
+### Two versions
+
+| | **Show for passers-by** | **Group lesson** |
+|---|---|---|
+| For | A stand at an open day: people walk by, look and play | One class of 20–30 students, about 20–25 minutes |
+| Start | `python -m show` | `python -m show --lesson` |
+| Flow | Attract screen → **SPACE** → steps 1–4 | Chapters 1–9, from the opening to the closing |
+| Players | Up to 6 players in view | A few volunteers in front (default 4), plus group games for everybody |
+| Nobody in view for 30 s | Back to the attract screen | Stays where it is |
+
+Press **G** (or the button in the panel) to switch between the two versions while the show runs.
+
+### Two levels of explanation
+
+All explanation pages (key **E**) have two levels:
+
+- **Simple** (default): one idea per page, in plain language, for students with no technical background.
+- **Detailed**: more steps and the real numbers (weights, test values, the top 5 scores). Good for older students or a technical audience.
+
+**Shift+E** (or *Level* in the panel) switches all explanations at once. The story is the same at both levels:
+
+1. To a computer, a photo is only numbers (pixels).
+2. Filters turn these numbers into clues, such as edges.
+3. The old AI (2001) asks fixed yes/no questions and stops at the first NO. The modern AI learned its own filters, adds up many clues, and finds all objects in one look (YOLO).
+4. The AI can miss a face when it gets too few clues.
+5. With small changes in the right place, you can fool an AI. Researchers do this to make AI stronger and safer.
+
+### Before you start
+
+- **Camera and light:** the light falls on the faces, not from behind (no window behind the group). Check the image with **C** (next camera).
+- **Screens:** the show on the big screen, the operator panel on your laptop (see [Setup](#️-setup-at-home-or-in-the-classroom)).
+- **Language:** **L** switches the screen between Dutch and English.
+- **Clicker:** most presentation clickers send *Page Down*, which shows the next text step. Test this first: some clickers send the arrow keys, and these change the step or chapter.
+- **Group lesson:** set *Max players* in the panel, and tape a zone on the floor for the volunteers.
+- **Practice alone:** add `--test` (or press **Y**) for a simulated group. See [Test without a group](#-group-lesson-2030-students).
+
+### Lead the explanations
+
+- **E** opens an explanation page. A page opens with only its title and the live image. The text waits for you.
+- **Page Down** (or **N**, or the clicker) shows the next text step; **Page Up** goes one step back. Nothing moves on by itself, so you can wait for a good image, for attention, or for a question. The dots at the bottom show how many steps there are.
+- The pages follow one face: the closest face, picked once. They never switch to another face by themselves. **TAB** picks the next face, for example when the volunteer changes.
+- Everything on the explanation pages is live and comes from the real models. Parts that are only an illustration (the slowed-down search of the old AI, the glasses pattern) have a label on screen.
+
+### Group lesson: chapter by chapter
+
+| # | Chapter | What you do |
+|---|---|---|
+| 1 | Opening: "I see about N people" | Let the group come in and look at the count. |
+| 2 | Pixels | **SPACE**: photo of a volunteer; **BACKSPACE**: live video again. **E**: how a filter finds edges (live: let the group wave). |
+| 3 | How does the AI recognize things? | The old-AI page opens by itself. **E**: modern AI → from clues to a box → close (then free detection). |
+| 4 | How sure is the computer? | **1** Fool, **2** Guess (whole group), **3** Hunt, **4** Confuse, **0** free. **I**: how-to-play card. |
+| 5 | Why the AI misses + Hide from the AI! | The page *Why can the AI miss a face?* opens by itself: let a volunteer cover their face, turn and step back. **E** closes it. **SPACE**: start a round. **M**: easy / hard. |
+| 6 | Hit the number! | **SPACE**: measure the maximum. **↑ / ↓**: target. **SPACE**: countdown. **SPACE**: next round. |
+| 7 | The glasses (simulation) | **E**: how the glasses are made, and why researchers do this. |
+| 8 | Traffic sign (illustration) | The same idea in another example. |
+| 9 | Closing | The QR code to the website (**K**: on / off). |
+
+### When something goes wrong
+
+- **A volunteer does not become a player:** press **D** (debug). The panel shows the reason for each person. Often it helps to take one step closer, stand a bit apart, or look straight into the camera. Turn debug off again: its text also shows on the big screen.
+- **The explanation follows the wrong face:** press **TAB** until the right face has the focus.
+- **Step 3 does not work in this room (light, distance):** press **P** to jump to step 4.
+- More problems and solutions: see [Troubleshooting](#-troubleshooting).
+
+---
+
 ## 🎮 During the show
 
 | Key | What does it do? |
 |---|---|
-| **SPACE** | Start the session (attract screen) or the action of the step: take a photo, start a round. |
+| **SPACE** | Start the session (attract screen) or the action of the step: take a photo, start a round. During a round: stop it now and show the score (during the countdown: cancel the round). |
+| **X** | During a round (step 2 game, step 3): 10 seconds more. Press again for more time. |
 | **→ / ←** | Next / previous step. |
-| **ESC** | Back to the attract screen. With a leaderboard on screen, ESC only closes it. |
+| **G** | Switch between the show for passers-by and the group lesson. |
+| **Y** | Test mode on / off: a simulated group, to test the lesson without a group. **,** / **.**: hide one face / show one again. With **Shift**: remove one person / add one. |
+| **↑ / ↓** | *Hit the number!*: target one higher / lower. |
+| **BACKSPACE** | Step 1: back to the live video. *Hit the number!*: measure the maximum again. |
+| **ESC** | Back to the attract screen (group lesson: the opening). With a leaderboard on screen, ESC only closes it. |
 | **1 – 4 / 0** | Step 2: choose a game / back to free detection. |
 | **I** | "How to play" card on / off. |
-| **E** | Explanation, live with real numbers. Step 2: how YOLO finds objects. Step 3: old AI → modern AI → off. Step 4: how the glasses are made. |
+| **Shift+E** | All explanations: simple (default) / detailed. |
+| **Page Down** / **N** | Explanation open: show the next text step (a presentation clicker sends Page Down). An explanation page opens with only its title and image; nothing moves on by itself. |
+| **Page Up** | Explanation open: one text step back. |
+| **TAB** | The explanations follow another face. They pick the closest face once and never switch by themselves. |
+| **E** | Explanation, live with real numbers. Simple by default (for everyone); **Shift+E** switches all explanations to detailed. Step 1: how a filter finds edges (detailed: after the photo, one filter on your pixels). Step 2: old AI → modern AI → from clues to a box → off. Step 3: why the AI can miss a face. Step 4: how the glasses are made. |
 | **M** | Step 3: easy (old AI) / hard (modern AI). |
 | **V** | Scores on faces on / off (step 3: only during a round). |
-| **T** | Step 2: next target (*Fool the AI!*, Shift+T: previous target) or next object (*Confusion meter*; you can also click an object in the panel). |
+| **T** | Step 2: next target (*Fool the AI!*, Shift+T: previous target) or choose one object (*Confusion meter*; after the last number back to automatic: all held objects count; you can also click an object in the panel). |
 | **O** | Overlays on / off: title bar, info bars and QR code. Game meters and timers stay. |
 | **K** | QR code on / off. |
 | **P** | Jump to step 4 (backup when step 3 does not work). |
@@ -147,7 +263,7 @@ The most important settings are in [`show/config.py`](show/config.py), with an e
 
 - The AI runs on your own computer: the camera images do not go to the internet. After the first download, the show needs no internet.
 - The show turns off the anonymous usage statistics of Ultralytics.
-- The show stores **no photos or videos**. The photo in step 1 exists only in memory and disappears when you move on.
+- The show stores **no photos or videos**. The photo in step 1 exists only in memory and disappears when you move on. The same holds for the frozen image of *Hit the number!*: it disappears at the next round.
 - The leaderboard (`leaderboard.json`) keeps only team names and scores.
 
 ---
@@ -194,11 +310,14 @@ computing-science-day-demo/
 │   ├── panel.py           the operator panel
 │   ├── texts.py           all screen texts (Dutch and English)
 │   ├── vision.py          camera and AI models
-│   ├── players.py         who is playing (step 3)
-│   ├── stages/            the steps: attract screen, 1 pixels, 2 detection, 3 hiding, 4 glasses
+│   ├── players.py         who is playing, and why someone is not (yet) a player
+│   ├── testmode.py        a simulated group, to test without a group (key Y)
+│   ├── stages/            the steps: attract screen, 1 pixels, 2 detection, 3 hiding, 4 glasses,
+│   │                      and the chapters of the group lesson (lesson.py, hitnumber.py)
 │   └── games/             the four games of step 2
 ├── assets/                images: the glasses and the QR code
 ├── docs/                  the website (GitHub Pages)
+├── tests/                 tests (game logic; the filter page computes as the model): python -m unittest discover -s tests -t .
 ├── requirements.txt       the Python parts
 ├── README.md              this guide (Dutch)
 └── README.en.md           this guide (English)
@@ -217,6 +336,7 @@ The AI models (`*.pt`) appear in the main folder by themselves at the first star
 | The operator panel is gone | It is behind the show (full screen). Press **F**, or just use the keys. |
 | The model download fails | Check the internet connection and start again. |
 | Wrong screen | Set `SHOW_DISPLAY` and `PANEL_DISPLAY` in `show/config.py`. |
+| Someone in front does not become a player | Turn on debug (**D**). The panel and the screen show for each person why they are not a player. Often this helps: one step closer, stand a bit apart, look straight into the camera. If not, walk out of view and back in. |
 
 ---
 

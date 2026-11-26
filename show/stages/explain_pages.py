@@ -1,30 +1,43 @@
-"""Stage 3 explanation (key E): how the old AI and the new AI look at a face, live, with real numbers.
+"""Stage 2 explanation (key E in free detection, the first two pages): how the old AI and the new
+AI look at a face, live, with real numbers. The third page is the grid page (detect_explain.py).
 
-Page "old": the face becomes a gray 24 x 24 grid, as the Haar cascade sees it. The tests of
-stage 1 of the real cascade file run on it one by one (white part counts plus, black part
-counts minus), then the page shows how many of the 25 stages the face passes.
+Page "old": how the Haar cascade searches. Its window slides over the gray camera image
+(slowed down, an illustration) next to the real windows where it finds a face. On the face, the
+window becomes a gray 24 x 24 grid; the tests of stage 1 of the real cascade file run on it one by
+one (white part counts plus, black part counts minus), then the page shows how many of the 25
+stages the face passes. The simple version shows two real tests as yes/no questions on the face
+(the strip over the eyes, the bridge of the nose), the 25 rounds and the search.
 
 Page "new": a crop of the face goes into a copy of the YOLO face model. The page shows real
-outputs of three layers (4 filters each) and the face score of that copy.
+outputs of three layers and the face score of that copy. Simple: one filter per layer, and
+the first one is an edge filter (measured, explain.FirstLayerFilters.edge_filters). In later
+layers the maps get smaller (10 x 10 squares in the last one shown), so each square sees a
+large part of the face; the page picks the filters whose output is highest on the face compared
+with around it (explain.face_contrast), and the simple page lays those maps over the face.
 
-Both pages follow the largest face; when it disappears (for example covered), they keep its
-last place for a few seconds, so the effect of covering stays visible.
+Simple or detailed: config.EXPLAIN_DETAIL (Shift+E). Both pages follow the explanation face
+(facelock.py): it never switches by itself; when it is covered, the pages keep its last place,
+so the effect of covering stays visible.
 """
 import cv2
 import numpy as np
 import pygame
 
 from .. import config
-from ..draw import BLACK, CYAN, GREEN, GREY, RED, WHITE, YELLOW, mix
-from ..explain import MAPS_PER_LAYER, FaceLayers, HaarCascadeFile, cut_window, haar_window
+from ..draw import CYAN, GREEN, GREY, RED, WHITE, YELLOW, mix
+from ..explain import (MAPS_PER_LAYER, FEATURE_LAYERS, FaceLayers, HaarCascadeFile, best_edge_filter,
+                       cut_window, face_contrast, haar_window, padded_square, shared_first_layer)
 from ..texts import t
-from ..vision import crop_square
+from .filter_page import edge_strength_rgb
+from .page_parts import STEPS, blit_image, draw_scan, draw_steps, score_bar
 
-STEP_TIME = 4.0        # seconds per text step
 TEST_TIME = 1.6        # seconds per Haar test on screen
 BLOCK_TIME = 2.0       # step 1: the zoomed block of numbers moves this often
-KEEP_FACE = 3.0        # seconds the last face place is kept when the face is gone
 HAAR_EVERY = 0.25      # seconds between two cascade evaluations (it runs in Python)
+SCAN_EVERY = 0.5       # seconds between two searches of the whole image with the cascade
+SCAN_WIDTH = 320       # the search runs on the camera image made this wide
+QUESTION_TIME = 4.0    # simple old page: seconds per yes/no question
+FACE_SIZE = 240        # simple old page: the gray face window on screen (pixels at 720 high)
 
 
 class ModelExplainer:
@@ -33,21 +46,23 @@ class ModelExplainer:
         self.haar = cv2.CascadeClassifier(cv2.data.haarcascades + config.HAAR_FILE)
         self.layers = FaceLayers()
         self.page = None           # None | "old" | "new"
-        self.start = 0.0
         self.face_box, self.face_seen = None, 0.0
         self.window = self.result = None   # old page: (window box, found by Haar), cascade result
         self.grid = None                   # old page: the 24 x 24 gray window
         self.last_haar = 0.0
         self.channels = {}                 # new page: layer -> chosen channels, fixed per opening
         self.scale = {}                    # layer -> value that is full color
+        self.first = shared_first_layer()  # to find the edge filters of layer 1
+        self.face_gray = None              # old page: the gray face window, large
+        self.scan, self.last_scan = None, 0.0   # old page: (small gray image, found windows)
 
     def preload(self):
         self.layers.preload()
+        self.first.preload()
 
-    def next_page(self, now):
-        """E: off -> old -> new -> off."""
-        self.page = {None: "old", "old": "new", "new": None}[self.page]
-        self.start = now
+    def open(self, page, now):
+        """page: "old", "new" or None (closed)."""
+        self.page = page
         self.channels, self.scale = {}, {}
         self.layers.result = None
 
@@ -58,57 +73,186 @@ class ModelExplainer:
     def update(self, app, det, now):
         if self.page is None or app.frame is None:
             return
-        faces = [f for f in det.faces if f.conf >= config.FACE_VISIBLE_CONF]
-        if faces:
-            self.face_box, self.face_seen = max(faces, key=lambda f: f.width).box, now
-        elif now - self.face_seen > KEEP_FACE:
-            self.face_box = None
+        if self.page == "old" and now - self.last_scan >= SCAN_EVERY:
+            self.last_scan = now
+            fh, fw = app.frame.shape[:2]
+            small = cv2.resize(app.frame, (SCAN_WIDTH, round(SCAN_WIDTH * fh / fw)), interpolation=cv2.INTER_AREA)
+            small = cv2.equalizeHist(cv2.cvtColor(small, cv2.COLOR_BGR2GRAY))
+            found = self.haar.detectMultiScale(small, scaleFactor=1.1, minNeighbors=3, minSize=(20, 20))
+            self.scan = (small, [tuple(int(v) for v in b) for b in found])
+        self.face_box = app.face_lock.box
         if self.face_box is None:
-            self.result = self.grid = None
+            self.result = self.grid = self.face_gray = None
             return
         if self.page == "old" and now - self.last_haar >= HAAR_EVERY:
             self.last_haar = now
             gray = cv2.equalizeHist(cv2.cvtColor(app.frame, cv2.COLOR_BGR2GRAY))  # as the live cascade does
             self.window = haar_window(gray, self.face_box, self.haar)
             self.grid = cut_window(gray, self.window[0], self.cascade.size)
+            self.face_gray = cut_window(gray, self.window[0], FACE_SIZE)
             self.result = self.cascade.evaluate(self.grid) if self.grid is not None else None
         elif self.page == "new":
-            self.layers.submit(crop_square(app.frame, self.face_box, margin=0.35))
+            self.layers.submit(*padded_square(app.frame, self.face_box, margin=0.35))
 
     # --- drawing ---
     def draw(self, r, app, now):
         sw, sh = r.size
         r.shade(pygame.Rect(0, 0, sw, sh), 235)
-        el = now - self.start
         prefix = "x3o" if self.page == "old" else "x3n"
+        detail = config.EXPLAIN_DETAIL
         x, y, w = r.u(40), r.top + r.u(24), r.u(500)
-        r.text(t(prefix + "_title"), 32, CYAN, topleft=(x, y))
-        y += r.u(54)
-        steps = t(prefix + "_steps")
-        shown = min(len(steps), 1 + int(el / STEP_TIME))
-        for i in range(shown):
-            circle = (x + r.u(15), y + r.u(15))
-            pygame.draw.circle(r.screen, YELLOW, circle, r.u(15))
-            r.text(str(i + 1), 20, BLACK, shadow=False, center=circle)
-            for line in r.wrap(steps[i], 22, w - r.u(44)):
-                r.text(line, 22, WHITE, topleft=(x + r.u(44), y))
-                y += r.u(29)
-            y += r.u(12)
-        if self.page == "new" and shown == len(steps):
-            from .detect_explain import draw_yolo_note
-            draw_yolo_note(r, x, y + r.u(8), w)
-        r.text(t("x3_next" if self.page == "old" else "x3_close"), 18, GREY, bottomleft=(x, sh - r.u(20)))
+        n = self.layers.n_filters
+        steps = [s.format(n=self.cascade.n_tests, f=f"{n:,}".replace(",", t("thousands")) if n else "")
+                 for s in t(prefix + ("_steps" if detail else "s_steps"))]
+        _, step = draw_steps(r, t(prefix + "_title"), steps, x, y, w, size=19 if detail else 22)
+        r.text(t("x3_next" if self.page == "old" else "x3_next_grid"), 18, GREY, bottomleft=(x, sh - r.u(20)))
 
         area = pygame.Rect(sw - r.u(720), r.top + r.u(24), r.u(690), sh - r.top - r.u(48))
+        if self.page == "old" and (step <= 0 if detail else step == 3) and self.scan is not None:
+            self._draw_search(r, area, now)    # the search needs no face
+            return
         if self.face_box is None:
             r.text(t("x3_no_face"), 28, YELLOW, center=area.center)
             return
-        if self.page == "old":
-            self._draw_old(r, area, el, now)
+        if not detail:
+            self._draw_old_simple(r, area, step, now) if self.page == "old" else self._draw_new_simple(r, area, step)
+        elif self.page == "old":
+            self._draw_old(r, area, step, now)
         else:
             self._draw_new(r, area)
 
-    def _draw_old(self, r, area, el, now):
+    def _draw_search(self, r, area, now):
+        gray, found = self.scan
+        w = area.w
+        h = round(w * gray.shape[0] / gray.shape[1])
+        draw_scan(r, pygame.Rect(area.x, area.y, w, min(h, area.h - r.u(60))), gray, found, now)
+
+    # --- simple pages ---
+    def _test_cells(self, test):
+        """Per cell of the 24 x 24 window: +1 = must be light for a face, -1 = must be dark, 0 = not
+        used. A test gives face points on one side of its limit; that side decides light or dark."""
+        n = self.cascade.size
+        w = np.zeros((n, n))
+        for x, y, ww, hh, wt in test["rects"]:
+            w[y:y + hh, x:x + ww] += wt
+        face_high = test["points_right"] > test["points_left"]   # face when the value is above the limit
+        return np.sign(w) * (1 if face_high else -1)
+
+    def _draw_old_simple(self, r, area, step, now):
+        """Two real yes/no questions on the face, the 25 rounds, and (step 4) the search."""
+        size = r.u(FACE_SIZE)
+        face = pygame.Rect(area.x, area.y, size, size)
+        if self.face_gray is None or self.result is None:
+            r.text(t("x3_no_face"), 28, YELLOW, center=area.center)
+            return
+        blit_image(r, self.face_gray, face)
+        pygame.draw.rect(r.screen, WHITE, face.inflate(4, 4), 2)
+        r.text(t("x3os_gray"), 15, GREY, bold=False, topleft=(face.x, face.bottom + r.u(6)))
+        qx, qw = face.right + r.u(30), area.right - face.right - r.u(30)
+        tests = self.result["stages"][0]["tests"]
+        if step >= 1:
+            q = int(STEPS.age(1, now) / QUESTION_TIME) % 2      # the first two tests of the real file
+            test = tests[q]
+            cells = self._test_cells(test)
+            n, c = self.cascade.size, size / self.cascade.size
+            tint = pygame.Surface((int(c) + 1, int(c) + 1), pygame.SRCALPHA)
+            for row in range(n):
+                for col in range(n):
+                    if cells[row, col]:
+                        tint.fill((255, 255, 255, 120) if cells[row, col] > 0 else (0, 0, 0, 150))
+                        r.screen.blit(tint, (face.x + col * c, face.y + row * c))
+            for x, y, ww, hh, _ in test["rects"]:   # the rectangles of the test, also on a light face
+                pygame.draw.rect(r.screen, YELLOW, (face.x + x * c, face.y + y * c, ww * c, hh * c), r.u(2))
+            y = area.y
+            for line in r.wrap(t("x3os_q")[q], 22, qw):
+                r.text(line, 22, WHITE, topleft=(qx, y))
+                y += r.u(29)
+            yes = test["points"] > 0
+            r.text(t("x3os_yes") if yes else t("x3os_no"), 48, GREEN if yes else RED, topleft=(qx, y + r.u(6)))
+            y += r.u(70)
+            for swatch, key in (((235, 235, 235), "x3os_light"), ((20, 20, 20), "x3os_dark")):
+                pygame.draw.rect(r.screen, swatch, (qx, y, r.u(22), r.u(22)))
+                pygame.draw.rect(r.screen, GREY, (qx, y, r.u(22), r.u(22)), 1)
+                r.text(t(key), 16, GREY, bold=False, midleft=(qx + r.u(32), y + r.u(11)))
+                y += r.u(30)
+        if step >= 2:
+            y = face.bottom + r.u(44)
+            passed, total = self.result["passed"], self.result["n_stages"]
+            r.text(t("x3o_stages", k=passed, n=total), 22, WHITE, topleft=(area.x, y))
+            box = r.u(24)
+            for s in range(total):
+                color = GREEN if s < passed else (RED if s == passed else (70, 70, 70))
+                pygame.draw.rect(r.screen, color, (area.x + s * (box + r.u(3)), y + r.u(36), box, box),
+                                 border_radius=r.u(4))
+            ok = self.result["face"]
+            r.text(t("x3o_face") if ok else t("x3o_noface"), 34, GREEN if ok else RED,
+                   topleft=(area.x, y + r.u(74)))
+
+    def _draw_new_simple(self, r, area, step):
+        """The face, one real output per layer (layer 1: an edge filter), and the face score."""
+        res = self.layers.result
+        if res is None:
+            r.text(t("x3n_wait"), 26, YELLOW, center=area.center)
+            return
+        size = r.u(170)
+        face = pygame.Rect(area.x, area.y, size, size)
+        blit_image(r, res["crop"], face)
+        r.text(t("x3n_input"), 15, GREY, bold=False, topleft=(face.x, face.bottom + r.u(6)))
+        tile, gap = r.u(190), r.u(40)
+        y = face.bottom + r.u(50)
+        layers = list(res["maps"].items())
+        bottom = y
+        for j, (layer, maps) in enumerate(layers):
+            if j > 0 and step < 1:
+                break
+            if layer not in self.channels:   # chosen once per opening, then kept
+                if j == 0 and self.first.ready:
+                    self.channels[layer] = [best_edge_filter(self.first, maps)]
+                else:   # the filter that points at the face most clearly
+                    self.channels[layer] = [int(np.argmax(self._ranking(maps, res)))]
+                m = maps[self.channels[layer][0]]
+                self.scale[layer] = (float(m.min()), max(float(m.min()) + 1e-6, float(np.percentile(m, 99))))
+            m = maps[self.channels[layer][0]]
+            rect = pygame.Rect(area.x + j * (tile + gap), y, tile, tile)
+            if j == 0:   # the edge filter: edges bright, flat areas dark, like the edge image of step 1
+                blit_image(r, edge_strength_rgb(m), rect)
+            else:        # a see-through color layer on the face: where this filter reacts strongly
+                lo, hi = self.scale[layer]
+                heat = cv2.applyColorMap((np.clip((m - lo) / (hi - lo), 0, 1) * 255).astype(np.uint8),
+                                         cv2.COLORMAP_INFERNO)
+                heat = cv2.cvtColor(cv2.resize(heat, (tile, tile), interpolation=cv2.INTER_NEAREST),
+                                    cv2.COLOR_BGR2RGB)        # the squares stay visible as blocks
+                photo = cv2.resize(res["crop"], (tile, tile), interpolation=cv2.INTER_AREA)
+                blit_image(r, cv2.addWeighted(photo, 0.45, heat, 0.55, 0), rect)
+            if j > 0:
+                r.text("→", 34, WHITE, center=(rect.x - gap // 2, rect.centery))
+            ly = rect.bottom + r.u(6)
+            for line in r.wrap(t("x3ns_layer")[j].format(n=FEATURE_LAYERS[j] + 1, s=m.shape[0]), 16,
+                               tile + gap - r.u(10), bold=False):
+                r.text(line, 16, GREY, bold=False, topleft=(rect.x, ly))
+                ly += r.u(21)
+            bottom = ly
+        if step >= 1:
+            ny = bottom + r.u(10)
+            for line in r.wrap(t("x3ns_note"), 17, area.w, bold=False):
+                r.text(line, 17, WHITE, bold=False, topleft=(area.x, ny))
+                ny += r.u(23)
+        if step >= 2:
+            sx = face.right + r.u(30)
+            r.text(t("x3n_score"), 22, WHITE, topleft=(sx, area.y + r.u(10)))
+            score_bar(r, pygame.Rect(sx, area.y + r.u(50), area.right - sx, r.u(40)), res["conf"],
+                      config.FACE_VISIBLE_CONF)
+            yy = area.y + r.u(104)
+            for line in r.wrap(t("x3n_real"), 16, area.right - sx, bold=False):
+                r.text(line, 16, CYAN, bold=False, topleft=(sx, yy))
+                yy += r.u(21)
+
+    @staticmethod
+    def _ranking(maps, res):
+        """Per filter: how clearly it points at the face (higher on the face than around it)."""
+        return face_contrast(maps, res["face"]) if res.get("face") else maps.mean(axis=(1, 2))
+
+    def _draw_old(self, r, area, newest, now):
         if self.grid is None or self.result is None:
             r.text(t("x3_no_face"), 28, YELLOW, center=area.center)
             return
@@ -123,7 +267,7 @@ class ModelExplainer:
         info_x, info_y = gx + n * cell + r.u(24), gy
         r.text(t("x3o_grid"), 18, GREY, bold=False, topleft=(gx, gy + n * cell + r.u(10)))
 
-        step = int(el / STEP_TIME)   # which text step is on screen (0 = the first)
+        step = newest - 1   # which text step is on screen, after the search step (0 = numbers)
         if step < 1:
             # step 1: a block of the grid as numbers, like stage 1
             k = 6
@@ -139,7 +283,7 @@ class ModelExplainer:
         stage1 = self.result["stages"][0]
         if step < 3:
             # steps 2 and 3: the tests of stage 1, one at a time
-            i = int((el - STEP_TIME) / TEST_TIME) % len(stage1["tests"])
+            i = int(STEPS.age(2, now) / TEST_TIME) % len(stage1["tests"])
             test = stage1["tests"][i]
             weights = np.zeros((n, n))
             for x, y, w, h, wt in test["rects"]:
@@ -167,9 +311,11 @@ class ModelExplainer:
 
         # steps 4 and 5: stage 1 total, then the 25 stages
         y = info_y
-        r.text(t("x3o_stage1", p=f"{stage1['total']:.2f}", lim=f"{stage1['limit']:.2f}"), 22,
-               GREEN if stage1["ok"] else RED, topleft=(info_x, y))
-        y += r.u(44)
+        for line in r.wrap(t("x3o_stage1", p=f"{stage1['total']:.2f}", lim=f"{stage1['limit']:.2f}"), 22,
+                           area.right - info_x):
+            r.text(line, 22, GREEN if stage1["ok"] else RED, topleft=(info_x, y))
+            y += r.u(30)
+        y += r.u(14)
         r.text(t("x3o_stages", k=self.result["passed"], n=self.result["n_stages"]), 22, WHITE, topleft=(info_x, y))
         y += r.u(36)
         box = r.u(22)
@@ -200,8 +346,8 @@ class ModelExplainer:
         y = area.y + size + r.u(40)
         tile = r.u(100)
         for layer, maps in res["maps"].items():
-            if layer not in self.channels:   # choose the strongest filters once per opening, then keep them
-                order = np.argsort(-maps.mean(axis=(1, 2)))[:MAPS_PER_LAYER]
+            if layer not in self.channels:   # choose the filters that point at the face, once per opening
+                order = np.argsort(-self._ranking(maps, res))[:MAPS_PER_LAYER]
                 self.channels[layer] = order
                 self.scale[layer] = max(1e-6, float(maps[order].max()))
             r.text(t("x3n_layer", n=layer + 1, c=maps.shape[0], k=MAPS_PER_LAYER, s=maps.shape[1]), 18, WHITE,

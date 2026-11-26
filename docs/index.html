@@ -126,6 +126,12 @@
     </div>
   </div>
 
+  <h2 id="les">🎓 <span data-l="nl">Groepsles (20–30 leerlingen)</span><span data-l="en">Group lesson (20–30 students)</span></h2>
+  <p data-l="nl">Naast de show voor voorbijgangers is er een les van ongeveer 20–25 minuten voor één groep. Start met <code>python -m show --lesson</code>, of druk tijdens de show op <kbd>G</kbd>. De les gaat van <em>wat ziet een computer?</em> naar het onderzoek: de bril (simulatie) en stickers op een verkeersbord (illustratie, bron: Eykholt et al., 2018).</p>
+  <p data-l="en">Next to the show for passers-by, there is a lesson of about 20–25 minutes for one group. Start with <code>python -m show --lesson</code>, or press <kbd>G</kbd> during the show. The lesson goes from <em>what does a computer see?</em> to the research: the glasses (simulation) and stickers on a traffic sign (illustration, source: Eykholt et al., 2018).</p>
+  <p data-l="nl"><strong>Raak het getal!</strong> is het groepsspel. De AI telt eerst alle gezichten die hij ziet: dat is het maximum. Dan kiest de leraar een doel, en de groep beslist wie zijn gezicht verstopt. Na het aftellen telt de AI 2 seconden lang. Het beeld bevriest met een stip op elk getelde gezicht. Precies goed?</p>
+  <p data-l="en"><strong>Hit the number!</strong> is the group game. First, the AI counts all faces it sees: that is the maximum. Then the teacher chooses a target, and the group decides who hides their face. After the countdown, the AI counts for 2 seconds. The image freezes with a dot on each counted face. Exactly right?</p>
+
   <h2 id="nodig">🧰 <span data-l="nl">Wat heb je nodig?</span><span data-l="en">What do you need?</span></h2>
   <ul data-l="nl">
     <li><strong>Een computer</strong> met Windows, macOS of Linux. Getest op Windows; macOS en Linux zouden moeten werken, maar zijn niet getest. Een NVIDIA-videokaart maakt de show vlotter, maar is niet nodig.</li>
@@ -218,11 +224,16 @@ python -m show</code></pre>
   <table>
     <tr><th><span data-l="nl">Toets</span><span data-l="en">Key</span></th><th><span data-l="nl">Wat doet het?</span><span data-l="en">What does it do?</span></th></tr>
     <tr><td><kbd>SPACE</kbd></td><td><span data-l="nl">Start de sessie, of de actie van de stap (foto, ronde).</span><span data-l="en">Start the session, or the action of the step (photo, round).</span></td></tr>
+    <tr><td><kbd>SPACE</kbd></td><td><span data-l="nl">Tijdens een ronde: ronde nu stoppen en score tonen.</span><span data-l="en">During a round: stop it now and show the score.</span></td></tr>
+    <tr><td><kbd>X</kbd></td><td><span data-l="nl">Tijdens een ronde: 10 seconden extra.</span><span data-l="en">During a round: 10 seconds more.</span></td></tr>
     <tr><td><kbd>→</kbd> <kbd>←</kbd></td><td><span data-l="nl">Volgende / vorige stap.</span><span data-l="en">Next / previous step.</span></td></tr>
+    <tr><td><kbd>G</kbd></td><td><span data-l="nl">Wissel tussen de show en de groepsles.</span><span data-l="en">Switch between the show and the group lesson.</span></td></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td><span data-l="nl"><em>Raak het getal!</em>: doel hoger / lager.</span><span data-l="en"><em>Hit the number!</em>: target higher / lower.</span></td></tr>
+    <tr><td><kbd>BACKSPACE</kbd></td><td><span data-l="nl"><em>Raak het getal!</em>: maximum opnieuw meten.</span><span data-l="en"><em>Hit the number!</em>: measure the maximum again.</span></td></tr>
     <tr><td><kbd>ESC</kbd></td><td><span data-l="nl">Terug naar het wachtscherm (of: scorebord sluiten).</span><span data-l="en">Back to the attract screen (or: close a leaderboard).</span></td></tr>
     <tr><td><kbd>1</kbd>–<kbd>4</kbd> <kbd>0</kbd></td><td><span data-l="nl">Stap 2: kies een spel / vrij kijken.</span><span data-l="en">Step 2: choose a game / free detection.</span></td></tr>
     <tr><td><kbd>I</kbd></td><td><span data-l="nl">Uitleg "hoe speel je het" aan / uit.</span><span data-l="en">"How to play" card on / off.</span></td></tr>
-    <tr><td><kbd>E</kbd></td><td><span data-l="nl">Uitleg. Stap 2: hoe YOLO voorwerpen vindt. Stap 3: oude AI → moderne AI → uit. Stap 4: hoe de bril gemaakt wordt.</span><span data-l="en">Explanation. Step 2: how YOLO finds objects. Step 3: old AI → modern AI → off. Step 4: how the glasses are made.</span></td></tr>
+    <tr><td><kbd>E</kbd></td><td><span data-l="nl">Uitleg, standaard eenvoudig (<kbd>Shift</kbd>+<kbd>E</kbd>: uitgebreid). Stap 1: hoe een filter randen vindt. Stap 2: oude AI → moderne AI → van aanwijzingen naar een kader → uit. Stap 3: waarom de AI een gezicht kan missen. Stap 4: hoe de bril gemaakt wordt. De tekst wacht op jou: <kbd>Page Down</kbd> (of <kbd>N</kbd>, of een clicker) toont de volgende stap, <kbd>Page Up</kbd> gaat terug.</span><span data-l="en">Explanation, simple by default (<kbd>Shift</kbd>+<kbd>E</kbd>: detailed). Step 1: how a filter finds edges. Step 2: old AI → modern AI → from clues to a box → off. Step 3: why the AI can miss a face. Step 4: how the glasses are made. The text waits for you: <kbd>Page Down</kbd> (or <kbd>N</kbd>, or a clicker) shows the next step, <kbd>Page Up</kbd> goes back.</span></td></tr>
     <tr><td><kbd>M</kbd></td><td><span data-l="nl">Stap 3: makkelijk (oude AI) / moeilijk (moderne AI).</span><span data-l="en">Step 3: easy (old AI) / hard (modern AI).</span></td></tr>
     <tr><td><kbd>V</kbd></td><td><span data-l="nl">Scores op gezichten aan / uit.</span><span data-l="en">Scores on faces on / off.</span></td></tr>
     <tr><td><kbd>T</kbd></td><td><span data-l="nl">Stap 2: volgend doel (Shift+T: vorig) of volgend voorwerp.</span><span data-l="en">Step 2: next target (Shift+T: previous) or next object.</span></td></tr>
@@ -240,13 +251,13 @@ python -m show</code></pre>
   <ul data-l="nl">
     <li>De AI rekent op je eigen computer: de camerabeelden gaan niet naar internet.</li>
     <li>De show zet de anonieme gebruiksstatistieken van Ultralytics uit.</li>
-    <li>De show slaat <strong>geen foto's of video's</strong> op. De foto in stap 1 staat alleen in het geheugen.</li>
+    <li>De show slaat <strong>geen foto's of video's</strong> op. De foto in stap 1 en het bevroren beeld van <em>Raak het getal!</em> staan alleen in het geheugen.</li>
     <li>Het scorebord bewaart alleen teamnamen en scores.</li>
   </ul>
   <ul data-l="en">
     <li>The AI runs on your own computer: the camera images do not go to the internet.</li>
     <li>The show turns off the anonymous usage statistics of Ultralytics.</li>
-    <li>The show stores <strong>no photos or videos</strong>. The photo in step 1 exists only in memory.</li>
+    <li>The show stores <strong>no photos or videos</strong>. The photo in step 1 and the frozen image of <em>Hit the number!</em> exist only in memory.</li>
     <li>The leaderboard keeps only team names and scores.</li>
   </ul>
 
@@ -295,6 +306,7 @@ python -m show</code></pre>
     <tr><td><em>"No working camera found"</em></td><td><span data-l="nl">Sluit programma's die de camera gebruiken (Teams, Zoom). Probeer <code>python -m show 1</code>. macOS: geef de Terminal toegang tot de camera.</span><span data-l="en">Close programs that use the camera (Teams, Zoom). Try <code>python -m show 1</code>. macOS: give the Terminal access to the camera.</span></td></tr>
     <tr><td><span data-l="nl">De show is traag</span><span data-l="en">The show is slow</span></td><td><span data-l="nl">Kijk in het paneel bij <em>Speed</em>. Sluit andere programma's. NVIDIA: installeer PyTorch met GPU-ondersteuning.</span><span data-l="en">Look at <em>Speed</em> in the panel. Close other programs. NVIDIA: install PyTorch with GPU support.</span></td></tr>
     <tr><td><span data-l="nl">Het paneel is weg</span><span data-l="en">The panel is gone</span></td><td><span data-l="nl">Het zit achter de show. Druk op <kbd>F</kbd>, of gebruik de toetsen.</span><span data-l="en">It is behind the show. Press <kbd>F</kbd>, or use the keys.</span></td></tr>
+    <tr><td><span data-l="nl">Iemand vooraan wordt geen speler</span><span data-l="en">Someone in front does not become a player</span></td><td><span data-l="nl">Zet debug aan (<kbd>D</kbd>): het paneel toont per persoon de reden. Vaak helpt: dichterbij, iets uit elkaar, recht in de camera kijken.</span><span data-l="en">Turn on debug (<kbd>D</kbd>): the panel shows the reason for each person. Often this helps: closer, a bit apart, look straight into the camera.</span></td></tr>
     <tr><td><span data-l="nl">Download mislukt</span><span data-l="en">Download fails</span></td><td><span data-l="nl">Controleer het internet en start opnieuw.</span><span data-l="en">Check the internet connection and start again.</span></td></tr>
   </table>
   </div>

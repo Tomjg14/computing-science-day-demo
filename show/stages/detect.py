@@ -4,6 +4,10 @@ An object is only shown after the tracker has followed it for a few frames in a 
 so one-frame mistakes do not reach the screen. To keep the screen calm, at most
 config.STAGE2_MAX_OBJECTS objects show: objects held by a player first, then the largest.
 Static objects (furniture and the like) never show.
+
+Key E in free detection: three explanation pages, live with real numbers. The old AI (Haar
+cascade) and the modern AI (layers of filters) on a face (explain_pages.py), then how the
+detector turns these clues into boxes (detect_explain.py). E after the last page closes them.
 """
 import pygame
 
@@ -17,10 +21,12 @@ from ..players import is_big, rank_objects
 from ..texts import object_name, t
 from .base import Stage
 from .detect_explain import DetectExplainer
+from .explain_pages import ModelExplainer
 
 ORANGE = (255, 140, 40)
 MAX_FOUND = 8
 GAME_KEYS = {pygame.K_1: FoolGame, pygame.K_2: GuessGame, pygame.K_3: HuntGame, pygame.K_4: ConfuseGame}
+PAGES = [None, "old", "new", "grid"]   # E goes to the next one; after "grid" back to None
 
 
 def conf_color(conf):
@@ -30,7 +36,7 @@ def conf_color(conf):
 
 
 class DetectStage(Stage):
-    name = "2 detection"
+    name = "detection"
     title_key = "s2_title"
     sub_key = "s2_sub"
 
@@ -39,31 +45,45 @@ class DetectStage(Stage):
         self.streak = {}   # track id -> frames in a row this object was seen
         self.stable = []
         self.game = None   # None = free detection, else one of the detection games
-        if self.explainer is None:
-            self.explainer = DetectExplainer()
+        if DetectStage.explainer is None:   # made once, also for the lesson chapter: they load models
+            DetectStage.explainer = DetectExplainer()
+            DetectStage.models = ModelExplainer()
         self.explainer.preload()
-        self.explainer.on = False
+        self.models.preload()
+        self.page = None
+        self._open(None, app.now)
 
-    explainer = None       # how YOLO finds objects (key E in free detection); made once, it loads a model
+    explainer = None       # page "grid": how YOLO turns clues into boxes
+    models = None          # pages "old" and "new": how the old and the modern AI look at a face
 
     @property
     def explain(self):
-        """True while the explanation shows (for the operator panel); only in free detection."""
-        return self.explainer is not None and self.explainer.on and self.game is None
+        """The explanation page on screen: None, "old", "new" or "grid" (for the operator panel);
+        only in free detection."""
+        return self.page if self.game is None else None
+
+    def _open(self, page, now):
+        self.page = page
+        self.models.open(page if page in ("old", "new") else None, now)
+        if (page == "grid") != self.explainer.on:
+            self.explainer.toggle(now)
 
     def action_label(self, app):
         return self.game.action_label() if self.game else None
 
+    def round_running(self, app):
+        return getattr(self.game, "round_running", lambda: False)()
+
     def on_key(self, key, app):
         if key in GAME_KEYS:
             self.game = GAME_KEYS[key](app)
-            self.explainer.on = False
+            self._open(None, app.now)
             return True
         if key == pygame.K_0:
             self.game = None
             return True
         if key == pygame.K_e and self.game is None:
-            self.explainer.toggle(app.now)
+            self._open(PAGES[(PAGES.index(self.page) + 1) % len(PAGES)], app.now)
             return True
         return self.game.on_key(key, app) if self.game else False
 
@@ -79,14 +99,19 @@ class DetectStage(Stage):
             self.found[o.name] = max(o.conf, self.found.get(o.name, 0.0))
         if self.game:
             self.game.update(app, det, now, dt)
-        else:
+        elif self.page in ("old", "new"):
+            self.models.update(app, det, now)
+        elif self.page == "grid":
             self.explainer.update(app)
 
     def draw(self, r, app, det, now):
         if self.game:
             self.game.draw(r, app, det, now)
             return
-        if self.explain:
+        if self.explain in ("old", "new"):
+            self.models.draw(r, app, now)
+            return
+        if self.explain == "grid":
             self.explainer.draw(r, app, now)
             return
         for f in det.faces:

@@ -8,6 +8,8 @@ import pygame
 from . import config
 from .controls import SHORTCUTS
 from .leaderboard import GAMES
+from .stages.detect import DetectStage
+from .stages.hitnumber import HitNumberStage
 from .texts import object_name
 
 PANEL_W, PANEL_H = 460, 760
@@ -44,6 +46,7 @@ class OperatorPanel:
         self.f = pygame.font.SysFont("arial", 17, bold=True)
         self.f_small = pygame.font.SysFont("arial", 15)
         self.f_mono = pygame.font.SysFont("consolas", 15, bold=True)
+        self._help_fonts = {}
 
     # --- input ---
     def owns(self, event):
@@ -125,11 +128,13 @@ class OperatorPanel:
         pygame.draw.rect(s, CARD, card, border_radius=10)
         n = len(app.stages)
         now = f"{app.index + 1}/{n}  {app.stage.name}" if app.index >= 0 else "attract mode"
-        nxt = app.stages[app.index + 1].name if app.index + 1 < n else "attract mode"
+        if app.lesson:
+            now = "LESSON " + now
+        nxt = app.stages[app.index + 1].name if app.index + 1 < n else app.home_name()
         lines = [
             ("Now", now, YELLOW),
             ("Next (RIGHT)", nxt, WHITE),
-            ("Players", f"{len(app.players.players)}   camera {app.camera.index}   language "
+            ("Players", f"{len(app.players.players)}/{config.MAX_PLAYERS}   camera {app.camera.index}   language "
                         f"{app.lang_code().upper()}", WHITE),
             ("Speed", f"screen {app.clock.get_fps():3.0f}   camera {app.camera.fps:4.1f}   "
                       f"AI {app.vision.fps:4.1f} fps", WHITE),
@@ -151,29 +156,55 @@ class OperatorPanel:
             img = self.f.render("no action right now", True, DIM)
             s.blit(img, img.get_rect(center=(x + w // 2, y + 25)))
         y += 58
+        if app.stage.round_running(app):
+            self._button((x, y, w, 40), f"+{config.EXTEND_TIME:.0f} s more time", key=pygame.K_x,
+                         color=(40, 140, 80), hint="X")
+            y += 48
 
-        if app.index == 1:  # stage 2: game choice
+        stage2 = isinstance(app.stage, DetectStage)
+        if stage2:  # stage 2: game choice
             y = self._draw_stage2_games(x, w, y)
+        if isinstance(app.stage, HitNumberStage):
+            y = self._draw_hit_number(app.stage, x, w, y)
         if app.in_evasion():  # stage 3: which face model plays
             easy = config.EVASION_MODE == "easy"
             self._button((x, y, w, 36), "Mode: EASY (Haar cascade)" if easy else "Mode: HARD (YOLO)",
                          key=pygame.K_m, color=BTN_ON if easy else BTN, hint="M")
             y += 44
-        holder = app.stage.game if app.index == 1 else app.stage
+        holder = app.stage.game if stage2 else app.stage
         if holder is not None and hasattr(holder, "instructions"):
             self._button((x, y, w, 36), "Hide instructions" if holder.instructions else "Show instructions",
                          key=pygame.K_i, color=BTN_ON if holder.instructions else BTN, hint="I")
             y += 44
         if hasattr(app.stage, "explain") and getattr(app.stage, "game", None) is None:  # stage 2 (free), 3, 4
             exp = app.stage.explain
-            label = {"old": "Explanation: old AI  (E: new AI)", "new": "Explanation: new AI  (E: close)",
-                     None: "Show explanation (old AI first)"}.get(exp) if not isinstance(exp, bool)                 else ("Hide explanation" if exp else "Show explanation")
+            label = {"filter": "Explanation: a filter  (E: close)",
+                     "old": "Explanation: old AI  (E: new AI)", "new": "Explanation: new AI  (E: grid)",
+                     "grid": "Explanation: clues to boxes  (E: close)",
+                     "fail": "Explanation: why the AI misses  (E: close)",
+                     None: "Show explanation"}.get(exp) if not isinstance(exp, bool) \
+                else ("Hide explanation" if exp else "Show explanation")
             self._button((x, y, w, 36), label,
                          key=pygame.K_e, color=BTN_ON if app.stage.explain else BTN, hint="E")
             y += 44
+            half = (w - 10) // 2
+            self._button((x, y, half, 36), "Level: DETAILED" if config.EXPLAIN_DETAIL else "Level: SIMPLE",
+                         action=app.toggle_explain_detail, color=BTN_ON if config.EXPLAIN_DETAIL else BTN,
+                         hint="Shift+E")
+            self._button((x + half + 10, y, half, 36), "Next face", action=app.next_face, hint="TAB")
+            y += 44
+            if app.stage.explain:
+                from .stages.page_parts import STEPS
+                self._button((x, y, half, 36), "< Step back", action=app.step_back, hint="PgUp")
+                self._button((x + half + 10, y, half, 36), f"Next step  {STEPS.shown}/{STEPS.total}",
+                             action=app.next_step, color=BTN_ON if STEPS.shown < STEPS.total else BTN,
+                             hint="PgDn / N")
+                y += 44
 
         for row in ((("< Previous", pygame.K_LEFT, "LEFT"), ("Next >", pygame.K_RIGHT, "RIGHT")),
-                    (("Attract mode", pygame.K_ESCAPE, "ESC"), ("Panda backup", pygame.K_p, "P")),
+                    (("Opening" if app.lesson else "Attract mode", pygame.K_ESCAPE, "ESC"),
+                     ("Panda backup", pygame.K_p, "P"),
+                     ("To show" if app.lesson else "To lesson", pygame.K_g, "G")),
                     (("Language NL/EN", pygame.K_l, "L"), ("Next camera", pygame.K_c, "C")),
                     (("Overlays", pygame.K_o, "O"), ("QR", pygame.K_k, "K"), ("Full", pygame.K_f, "F"),
                      ("Debug", pygame.K_d, "D"), ("Scores", pygame.K_v, "V"))):
@@ -184,7 +215,7 @@ class OperatorPanel:
                 self._button((x + i * (bw + 10), y, bw, 40), label, key=key, hint=hint, color=BTN_ON if on else BTN)
             y += 48
 
-        if app.index == 1:
+        if stage2:
             return  # stage 2 needs the space for the game controls; the room settings are for players
         y += 8
         self._text("ROOM SETTINGS", self.f_small, DIM, (x, y))
@@ -195,13 +226,36 @@ class OperatorPanel:
             limit = ("Face visible limit", f"{config.FACE_VISIBLE_CONF:.2f}")
         rows = (("Player face size", f"{config.PLAYER_MIN_FACE:.2f}",
                  lambda: app.adjust("PLAYER_MIN_FACE", -0.01), lambda: app.adjust("PLAYER_MIN_FACE", 0.01)),
-                (*limit, lambda: app.adjust_face_limit(False), lambda: app.adjust_face_limit(True)))
+                (*limit, lambda: app.adjust_face_limit(False), lambda: app.adjust_face_limit(True)),
+                ("Max players", f"{config.MAX_PLAYERS}",
+                 lambda: app.adjust("MAX_PLAYERS", -1), lambda: app.adjust("MAX_PLAYERS", 1)))
         for label, value, down, up in rows:
             self._text(label, self.f, WHITE, (x, y + 8))
             self._text(value, self.f_mono, YELLOW, (x + 200, y + 9))
             self._button((x + w - 110, y, 50, 34), "-", action=down)
             self._button((x + w - 50, y, 50, 34), "+", action=up)
             y += 42
+        if app.debug:   # why people in view are not players (also on the show screen)
+            self._text("NOT A PLAYER, BECAUSE ...", self.f_small, DIM, (x, y + 4))
+            y += 24
+            reasons = [why for _, why in app.players.why_not] or ["(everyone in view is a player)"]
+            for why in reasons[:4]:
+                self._text("- " + why, self.f_small, WHITE, (x, y))
+                y += 19
+
+    def _draw_hit_number(self, stage, x, w, y):
+        """Hit the number: the target (UP / DOWN) and measuring the maximum again (BACKSPACE)."""
+        self._text("HIT THE NUMBER", self.f_small, DIM, (x, y))
+        y += 20
+        third = (w - 20) // 3
+        self._button((x, y, third, 34), "-1", key=pygame.K_DOWN, hint="DOWN")
+        top = "?" if stage.maximum is None else stage.maximum
+        img = self.f.render(f"{stage.target}  (max {top})", True, YELLOW)
+        self.surface.blit(img, img.get_rect(center=(x + third + 10 + third // 2, y + 17)))
+        self._button((x + 2 * (third + 10), y, third, 34), "+1", key=pygame.K_UP, hint="UP")
+        y += 42
+        self._button((x, y, w, 36), "Measure the maximum again", key=pygame.K_BACKSPACE, hint="BACKSPACE")
+        return y + 44
 
     def _draw_stage2_games(self, x, w, y):
         stage = self.app.stage
@@ -234,22 +288,23 @@ class OperatorPanel:
         return y + 6
 
     def _draw_confuse_choices(self, game, x, w, y):
-        """The numbered candidates as buttons: click one to choose it (T: next number)."""
+        """The numbered candidates as buttons: click one to choose only that one, click it again
+        for the automatic choice (T: next number, after the last one automatic)."""
         choices = game.choices()
-        pick = "your choice" if game.pick_id is not None else "automatic"
-        self._text(f"OBJECT THAT COUNTS ({pick}; * = held by a player)", self.f_small, DIM, (x, y))
+        pick = "your choice, click again for auto" if game.pick_id is not None else "auto: all held"
+        self._text(f"OBJECTS THAT COUNT ({pick}; * = held)", self.f_small, DIM, (x, y))
         y += 20
         if not choices:
             self._text("no objects in view", self.f_small, DIM, (x, y + 4))
             return y + 30
         cols = 3
         bw = (w - 10 * (cols - 1)) // cols
-        main_id = game.main.id if game.main is not None else None
+        counted = game.counted_ids()
         for i, (n, o, held) in enumerate(choices):
             bx, by = x + (i % cols) * (bw + 10), y + (i // cols) * 38
             label = f"{n} {object_name(o.name)}{' *' if held else ''}"
             self._button((bx, by, bw, 32), label, action=lambda oid=o.id: game.pick(oid),
-                         color=BTN_MAIN if o.id == main_id else BTN, font=self.f_small)
+                         color=BTN_MAIN if o.id in counted else BTN, font=self.f_small)
         return y + ((len(choices) + cols - 1) // cols) * 38 + 4
 
     def _draw_scores(self, x, w):
@@ -283,12 +338,19 @@ class OperatorPanel:
                      action=app.clear_today, hint="Shift+R")
 
     def _draw_help(self, x, w):
+        """All keys; the text gets smaller until the list fits the panel."""
+        for size in (15, 14, 13, 12, 11):
+            font = self._help_fonts.setdefault(size, pygame.font.SysFont("arial", size))
+            rows = [_wrap(text, font, w - 110) for _, _, text in SHORTCUTS]
+            line = size + 3
+            if 58 + sum(len(r) * line + 4 for r in rows) + 30 <= PANEL_H - 40:
+                break
         y = 58
-        for _, key_name, text in SHORTCUTS:
+        for (_, key_name, _), lines in zip(SHORTCUTS, rows):
             self._text(key_name, self.f_mono, YELLOW, (x, y))
-            for line in _wrap(text, self.f_small, w - 110):
-                self._text(line, self.f_small, WHITE, (x + 110, y))
-                y += 18
+            for text_line in lines:
+                self._text(text_line, font, WHITE, (x + 110, y))
+                y += line
             y += 4
         self._text("All keys work in both windows.", self.f_small, GREEN, (x, y + 4))
 

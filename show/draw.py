@@ -10,7 +10,7 @@ RED = (240, 70, 70)
 PURPLE = (190, 90, 255)
 YELLOW = (255, 210, 60)
 CYAN = (0, 220, 255)
-PLAYER_COLORS = [(80, 180, 255), (255, 140, 60), (90, 230, 160), (255, 100, 200)]
+PLAYER_COLORS = [(80, 180, 255), (255, 140, 60), (90, 230, 160), (255, 100, 200), (180, 140, 255), (240, 230, 90)]
 
 
 def class_color(name):
@@ -102,6 +102,19 @@ class Renderer:
         pygame.draw.rect(self.screen, color, tag, border_radius=self.u(6))
         self.screen.blit(img, (tag.x + pad, tag.y + pad))
         return r
+
+    def faint_box(self, box, color=WHITE, alpha=90, width=2):
+        """A thin, see-through box: the AI sees this person, without drawing attention."""
+        r = self.rect(box)
+        surf = pygame.Surface(r.size, pygame.SRCALPHA)
+        pygame.draw.rect(surf, (*color, alpha), surf.get_rect(), self.u(width), border_radius=self.u(6))
+        self.screen.blit(surf, r.topleft)
+
+    def dot(self, x, y, color, radius=10):
+        """A round mark with a dark edge, at a point in frame pixels."""
+        c = self.point(x, y)
+        pygame.draw.circle(self.screen, BLACK, c, self.u(radius + 3))
+        pygame.draw.circle(self.screen, color, c, self.u(radius))
 
     def wrap(self, text, size, width, bold=True):
         f, words, lines, cur = self.font(size, bold), text.split(), [], ""

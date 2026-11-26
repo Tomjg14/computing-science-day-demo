@@ -1,11 +1,13 @@
 """Game B - What does the AI think? A silhouette guessing game for the whole audience.
 
-Only an object held by a player plays (players.held_by): the live image shows one '???' box,
-on that object. SPACE freezes the image: a segmentation model cuts out that object, which
-appears as a black silhouette on a star burst. With no held object, SPACE asks the players
-to hold one up and does not freeze; objects in the background never play. The audience guesses; SPACE reveals what the AI
-thinks, with the score counting up. No score is kept. The frozen image lives in memory
-only and is dropped for the next object (ADR 0001).
+Only objects held by players play (players.held_by): the live image shows a numbered '???'
+box on each held object, numbered from left to right. SPACE freezes the image: a segmentation
+model cuts out every held object. The objects then come one at a time, as a black silhouette
+on a star burst: the audience guesses, SPACE reveals what the AI thinks (the score counts up),
+SPACE again goes to the next object, and after the last one back to the live image. With no
+held object, SPACE asks the players to hold one up and does not freeze; objects in the
+background never play. No score is kept. The frozen image lives in memory only and is
+dropped for the next round (ADR 0001).
 """
 import math
 
@@ -52,8 +54,9 @@ class GuessGame:
     def __init__(self, app):
         self.phase, self.phase_start = "live", 0.0   # live | looking | frozen | reveal
         self.instructions = True
-        self.answer = None        # {"name", "conf", "also", "silhouette", "photo"} while frozen
-        self.held = None          # the object a player holds now (live phase), or None
+        self.answers = []         # [{"name", "conf", "also", "silhouette", "photo"}] while frozen
+        self.index = 0            # the answer on screen now
+        self.held = []            # the objects players hold now (live phase), left to right
         self.none_until = 0.0
         self.none_key = "guess_none"
         self.segmenter = app.segmenter
@@ -63,9 +66,15 @@ class GuessGame:
     def can_name(self):
         return False  # no score in this game
 
+    @property
+    def answer(self):
+        return self.answers[self.index] if self.index < len(self.answers) else None
+
     def action_label(self):
-        return {"live": "Freeze: show silhouette", "frozen": "Reveal the answer",
-                "reveal": "Next object"}.get(self.phase)
+        if self.phase == "reveal":
+            left = len(self.answers) - self.index - 1
+            return f"Next object ({left} left)" if left else "Back to live image"
+        return {"live": "Freeze: show silhouettes", "frozen": "Reveal the answer"}.get(self.phase)
 
     def on_key(self, key, app):
         if key == pygame.K_i:
@@ -75,26 +84,43 @@ class GuessGame:
             return False
         if self.phase == "live" and app.frame is not None:
             self.instructions = False
-            if self.held is None:  # nothing held: ask for an object, do not freeze
+            if not self.held:  # nothing held: ask for an object, do not freeze
                 self.none_until, self.none_key = app.now + 3.0, "guess_hold"
                 return True
-            frame, target = app.frame.copy(), self.held.box
+            frame, targets = app.frame.copy(), [o.box for o in self.held]
             self.phase, self.phase_start = "looking", app.now
-            self.segmenter.run_async(frame, lambda found: self._on_found(frame, found, target))
+            self.segmenter.run_async(frame, lambda found: self._on_found(frame, found, targets))
         elif self.phase == "frozen":
             self.phase, self.phase_start = "reveal", app.now
         elif self.phase == "reveal":
-            self.answer = None
-            self.phase = "live"
+            if self.index + 1 < len(self.answers):
+                self.index += 1
+                self.phase, self.phase_start = "frozen", app.now
+            else:
+                self.answers, self.index = [], 0
+                self.phase = "live"
         return True
 
-    def _on_found(self, frame, found, target):
-        """Runs in the segmenter thread: cut out the shape that matches the held object's box."""
-        match = max(found, key=lambda f: iou(f["box"], target), default=None)
-        if match is None or iou(match["box"], target) < MATCH_IOU:
+    def _on_found(self, frame, found, targets):
+        """Runs in the segmenter thread: for each held object, cut out the shape that matches its
+        box. A shape is used for one object only. Objects without a matching shape are skipped."""
+        answers, used = [], set()
+        for target in targets:
+            free = [f for f in found if id(f) not in used]
+            match = max(free, key=lambda f: iou(f["box"], target), default=None)
+            if match is None or iou(match["box"], target) < MATCH_IOU:
+                continue
+            used.add(id(match))
+            answers.append(self._answer(frame, found, match))
+        if not answers:
             self.phase, self.none_until, self.none_key = "live", self.phase_start + 3.0, "guess_none"
             return
-        main = match
+        self.answers, self.index = answers, 0
+        self.phase = "frozen"
+
+    @staticmethod
+    def _answer(frame, found, main):
+        """Silhouette, photo and the AI's answer for one cut-out shape."""
         also = sorted((f for f in found if f is not main and f["name"] != main["name"]
                        and iou(f["box"], main["box"]) > 0.4), key=lambda f: -f["conf"])
         seen, alternatives = set(), []
@@ -111,21 +137,21 @@ class GuessGame:
         alpha = (main["mask"][b:d, a:c] * 255).astype(np.uint8)
         dark = np.zeros_like(rgb)
         dark[:] = (15, 15, 25)
-        self.answer = {"name": main["name"], "conf": main["conf"], "also": alternatives[:3],
-                       "silhouette": _rgba(dark, alpha), "photo": _rgba(rgb, alpha)}
-        self.phase = "frozen"
+        return {"name": main["name"], "conf": main["conf"], "also": alternatives[:3],
+                "silhouette": _rgba(dark, alpha), "photo": _rgba(rgb, alpha)}
 
     def update(self, app, det, now, dt):
         players = list(app.players.players.values())
-        ranked = rank_objects(det.objects, players)
-        self.held = ranked[0] if ranked and held_by(ranked[0], players) is not None else None
+        held = [o for o in rank_objects(det.objects, players) if held_by(o, players) is not None]
+        self.held = sorted(held, key=lambda o: o.box[0])  # left to right, so the numbers match the image
 
     # --- screen ---
     def draw(self, r, app, det, now):
         sw, sh = r.size
         if self.phase in ("live", "looking"):
-            if self.held is not None and self.phase == "live":  # one box, no label: no spoilers
-                r.labeled_box(self.held.box, "???", YELLOW, width=4, size=24)
+            if self.phase == "live":  # a numbered box per held object, no label: no spoilers
+                for n, o in enumerate(self.held, 1):
+                    r.labeled_box(o.box, f"{n}  ???" if len(self.held) > 1 else "???", YELLOW, width=4, size=24)
             r.banner(r.top, r.u(60), 120)
             r.text(t("guess_live"), 36, YELLOW, center=(sw // 2, r.top + r.u(30)))
             if self.phase == "looking":
@@ -183,6 +209,9 @@ class GuessGame:
 
         # title and answer
         r.text(t("guess_name"), 52, YELLOW, midtop=(sw // 2, area.y + r.u(12)))
+        if len(self.answers) > 1:
+            r.text(t("guess_count", i=self.index + 1, n=len(self.answers)), 28, WHITE,
+                   topright=(area.right - r.u(20), area.y + r.u(20)))
         if self.phase == "frozen":
             r.text(t("guess_ask"), 30, WHITE, midbottom=(sw // 2, area.bottom - r.u(14)))
             return
