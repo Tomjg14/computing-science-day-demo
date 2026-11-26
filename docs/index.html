@@ -64,6 +64,7 @@
     <nav>
       <a href="#show"><span data-l="nl">De show</span><span data-l="en">The show</span></a>
       <a href="#installatie"><span data-l="nl">Zelf opzetten</span><span data-l="en">Set it up</span></a>
+      <a href="#docent"><span data-l="nl">Docent</span><span data-l="en">Instructor</span></a>
       <a href="#onderzoek"><span data-l="nl">Onderzoek</span><span data-l="en">Research</span></a>
     </nav>
     <button id="lang" type="button" aria-label="Switch language / Wissel van taal">🇬🇧 English</button>
@@ -217,6 +218,108 @@ python -m show</code></pre>
         <li><strong>macOS:</strong> give the Terminal access to the camera (Privacy &amp; Security → Camera).</li>
       </ul>
     </div>
+  </div>
+
+  <h2 id="docent">👩‍🏫 <span data-l="nl">Voor de docent of presentator</span><span data-l="en">For the instructor</span></h2>
+  <p data-l="nl">Dit deel is voor wie de demo geeft: welke versie je kiest, wat je voorbereidt en hoe je de uitleg leidt.</p>
+  <p data-l="en">This part is for the person who gives the demo: which version to choose, what to prepare, and how to lead the explanations.</p>
+
+  <h3><span data-l="nl">Twee versies</span><span data-l="en">Two versions</span></h3>
+  <div class="table-wrap">
+  <table>
+    <tr><th></th><th><span data-l="nl">Show voor voorbijgangers</span><span data-l="en">Show for passers-by</span></th><th><span data-l="nl">Groepsles</span><span data-l="en">Group lesson</span></th></tr>
+    <tr><td><span data-l="nl">Voor</span><span data-l="en">For</span></td><td><span data-l="nl">Een stand op een open dag: mensen lopen langs, kijken en spelen mee</span><span data-l="en">A stand at an open day: people walk by, look and play</span></td><td><span data-l="nl">Eén klas van 20–30 leerlingen, ongeveer 20–25 minuten</span><span data-l="en">One class of 20–30 students, about 20–25 minutes</span></td></tr>
+    <tr><td><span data-l="nl">Starten</span><span data-l="en">Start</span></td><td><span data-l="nl"><code>python -m show</code></span><span data-l="en"><code>python -m show</code></span></td><td><span data-l="nl"><code>python -m show --lesson</code></span><span data-l="en"><code>python -m show --lesson</code></span></td></tr>
+    <tr><td><span data-l="nl">Verloop</span><span data-l="en">Flow</span></td><td><span data-l="nl">Wachtscherm → <kbd>SPACE</kbd> → stap 1–4</span><span data-l="en">Attract screen → <kbd>SPACE</kbd> → steps 1–4</span></td><td><span data-l="nl">Hoofdstuk 1–9, van de opening tot de afsluiting</span><span data-l="en">Chapters 1–9, from the opening to the closing</span></td></tr>
+    <tr><td><span data-l="nl">Spelers</span><span data-l="en">Players</span></td><td><span data-l="nl">Tot 6 spelers in beeld</span><span data-l="en">Up to 6 players in view</span></td><td><span data-l="nl">Een paar vrijwilligers vooraan (standaard 4), plus groepsspellen voor iedereen</span><span data-l="en">A few volunteers in front (default 4), plus group games for everybody</span></td></tr>
+    <tr><td><span data-l="nl">30 s niemand in beeld</span><span data-l="en">Nobody in view for 30 s</span></td><td><span data-l="nl">Terug naar het wachtscherm</span><span data-l="en">Back to the attract screen</span></td><td><span data-l="nl">Blijft waar hij is</span><span data-l="en">Stays where it is</span></td></tr>
+  </table>
+  </div>
+  <p data-l="nl">Druk op <kbd>G</kbd> (of op de knop in het paneel) om tijdens de show te wisselen.</p>
+  <p data-l="en">Press <kbd>G</kbd> (or the button in the panel) to switch while the show runs.</p>
+
+  <h3><span data-l="nl">Twee niveaus van uitleg</span><span data-l="en">Two levels of explanation</span></h3>
+  <p data-l="nl">Alle uitlegpagina's (<kbd>E</kbd>) zijn er <strong>eenvoudig</strong> (standaard: één idee per pagina, in gewone taal) en <strong>uitgebreid</strong> (meer stappen en de echte getallen). <kbd>Shift</kbd>+<kbd>E</kbd> wisselt alle uitleg tegelijk. Het verhaal is op beide niveaus hetzelfde:</p>
+  <p data-l="en">All explanation pages (<kbd>E</kbd>) come in <strong>simple</strong> (default: one idea per page, in plain language) and <strong>detailed</strong> (more steps and the real numbers). <kbd>Shift</kbd>+<kbd>E</kbd> switches all explanations at once. The story is the same at both levels:</p>
+  <ol data-l="nl">
+    <li>Voor een computer is een foto alleen getallen (pixels).</li>
+    <li>Filters maken van die getallen aanwijzingen, zoals randen.</li>
+    <li>De oude AI (2001) stelt vaste ja/nee-vragen en stopt bij het eerste NEE. De moderne AI heeft zijn filters zelf geleerd, telt veel aanwijzingen op en vindt alles in één keer kijken (YOLO).</li>
+    <li>De AI kan een gezicht missen als hij te weinig aanwijzingen krijgt.</li>
+    <li>Met kleine veranderingen op de juiste plek kun je een AI foppen. Onderzoekers doen dit om AI sterker en veiliger te maken.</li>
+  </ol>
+  <ol data-l="en">
+    <li>To a computer, a photo is only numbers (pixels).</li>
+    <li>Filters turn these numbers into clues, such as edges.</li>
+    <li>The old AI (2001) asks fixed yes/no questions and stops at the first NO. The modern AI learned its own filters, adds up many clues, and finds everything in one look (YOLO).</li>
+    <li>The AI can miss a face when it gets too few clues.</li>
+    <li>With small changes in the right place, you can fool an AI. Researchers do this to make AI stronger and safer.</li>
+  </ol>
+
+  <div class="grid">
+    <div class="card">
+      <h3><span data-l="nl">Voordat je begint</span><span data-l="en">Before you start</span></h3>
+      <ul data-l="nl">
+        <li><strong>Licht</strong> op de gezichten, niet van achteren. Controleer het beeld (<kbd>C</kbd>: volgende camera).</li>
+        <li><strong>Taal:</strong> <kbd>L</kbd> wisselt Nederlands / Engels.</li>
+        <li><strong>Clicker:</strong> de meeste sturen <em>Page Down</em> (volgende tekststap). Test dit: sommige sturen pijltjestoetsen, en die wisselen de stap.</li>
+        <li><strong>Groepsles:</strong> zet <em>Max players</em> in het paneel en plak een vak op de vloer voor de vrijwilligers.</li>
+        <li><strong>Alleen oefenen:</strong> <code>--test</code> of <kbd>Y</kbd> geeft een gesimuleerde groep.</li>
+      </ul>
+      <ul data-l="en">
+        <li><strong>Light</strong> on the faces, not from behind. Check the image (<kbd>C</kbd>: next camera).</li>
+        <li><strong>Language:</strong> <kbd>L</kbd> switches Dutch / English.</li>
+        <li><strong>Clicker:</strong> most send <em>Page Down</em> (next text step). Test this: some send the arrow keys, and these change the step.</li>
+        <li><strong>Group lesson:</strong> set <em>Max players</em> in the panel and tape a zone on the floor for the volunteers.</li>
+        <li><strong>Practice alone:</strong> <code>--test</code> or <kbd>Y</kbd> adds a simulated group.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span data-l="nl">De uitleg leiden</span><span data-l="en">Lead the explanations</span></h3>
+      <ul data-l="nl">
+        <li><kbd>E</kbd> opent een pagina met alleen de titel en het live beeld. De tekst wacht op jou.</li>
+        <li><kbd>Page Down</kbd> (of <kbd>N</kbd>, of de clicker): volgende stap. <kbd>Page Up</kbd>: één terug. Niets gaat vanzelf verder.</li>
+        <li>De pagina's volgen één gezicht en wisselen nooit vanzelf. <kbd>TAB</kbd>: volgend gezicht.</li>
+        <li>Alles is live en komt uit de echte modellen. Een illustratie heeft een label op het scherm.</li>
+      </ul>
+      <ul data-l="en">
+        <li><kbd>E</kbd> opens a page with only its title and the live image. The text waits for you.</li>
+        <li><kbd>Page Down</kbd> (or <kbd>N</kbd>, or the clicker): next step. <kbd>Page Up</kbd>: one back. Nothing moves on by itself.</li>
+        <li>The pages follow one face and never switch by themselves. <kbd>TAB</kbd>: next face.</li>
+        <li>Everything is live and comes from the real models. An illustration has a label on screen.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span data-l="nl">Als er iets misgaat</span><span data-l="en">When something goes wrong</span></h3>
+      <ul data-l="nl">
+        <li><strong>Vrijwilliger wordt geen speler:</strong> <kbd>D</kbd> (debug) toont per persoon de reden. Zet debug daarna weer uit.</li>
+        <li><strong>Verkeerd gezicht in de uitleg:</strong> <kbd>TAB</kbd>.</li>
+        <li><strong>Stap 3 werkt niet in deze ruimte:</strong> <kbd>P</kbd> springt naar stap 4.</li>
+        <li>Meer: <a href="#problemen">Problemen oplossen</a>.</li>
+      </ul>
+      <ul data-l="en">
+        <li><strong>A volunteer does not become a player:</strong> <kbd>D</kbd> (debug) shows the reason for each person. Turn debug off again after.</li>
+        <li><strong>Wrong face in the explanation:</strong> <kbd>TAB</kbd>.</li>
+        <li><strong>Step 3 does not work in this room:</strong> <kbd>P</kbd> jumps to step 4.</li>
+        <li>More: <a href="#problemen">Troubleshooting</a>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span data-l="nl">Groepsles: hoofdstuk voor hoofdstuk</span><span data-l="en">Group lesson: chapter by chapter</span></h3>
+  <div class="table-wrap">
+  <table>
+    <tr><th>#</th><th><span data-l="nl">Hoofdstuk</span><span data-l="en">Chapter</span></th><th><span data-l="nl">Wat doe je?</span><span data-l="en">What you do</span></th></tr>
+    <tr><td>1</td><td><span data-l="nl">Opening: “Ik zie ongeveer N mensen”</span><span data-l="en">Opening: “I see about N people”</span></td><td><span data-l="nl">Laat de groep binnenkomen en naar de telling kijken.</span><span data-l="en">Let the group come in and look at the count.</span></td></tr>
+    <tr><td>2</td><td><span data-l="nl">Pixels</span><span data-l="en">Pixels</span></td><td><span data-l="nl"><kbd>SPACE</kbd>: foto van een vrijwilliger; <kbd>BACKSPACE</kbd>: weer live beeld. <kbd>E</kbd>: hoe een filter randen vindt (live: laat de groep zwaaien).</span><span data-l="en"><kbd>SPACE</kbd>: photo of a volunteer; <kbd>BACKSPACE</kbd>: live video again. <kbd>E</kbd>: how a filter finds edges (live: let the group wave).</span></td></tr>
+    <tr><td>3</td><td><span data-l="nl">Hoe herkent de AI dingen?</span><span data-l="en">How does the AI recognize things?</span></td><td><span data-l="nl">De pagina over de oude AI opent vanzelf. <kbd>E</kbd>: moderne AI → van aanwijzingen naar een kader → sluiten (daarna vrije detectie).</span><span data-l="en">The old-AI page opens by itself. <kbd>E</kbd>: modern AI → from clues to a box → close (then free detection).</span></td></tr>
+    <tr><td>4</td><td><span data-l="nl">Hoe zeker is de computer?</span><span data-l="en">How sure is the computer?</span></td><td><span data-l="nl"><kbd>1</kbd> Bedrieg, <kbd>2</kbd> Raad (hele groep), <kbd>3</kbd> Speurtocht, <kbd>4</kbd> Verwarring, <kbd>0</kbd> vrij. <kbd>I</kbd>: uitlegkaart van het spel.</span><span data-l="en"><kbd>1</kbd> Fool, <kbd>2</kbd> Guess (whole group), <kbd>3</kbd> Hunt, <kbd>4</kbd> Confuse, <kbd>0</kbd> free. <kbd>I</kbd>: how-to-play card.</span></td></tr>
+    <tr><td>5</td><td><span data-l="nl">Waarom de AI mist + Verstop je voor de AI!</span><span data-l="en">Why the AI misses + Hide from the AI!</span></td><td><span data-l="nl">De pagina <em>Waarom kan de AI een gezicht missen?</em> opent vanzelf: laat een vrijwilliger het gezicht bedekken, draaien en naar achteren stappen. <kbd>E</kbd> sluit hem. <kbd>SPACE</kbd>: start een ronde. <kbd>M</kbd>: makkelijk / moeilijk.</span><span data-l="en">The page <em>Why can the AI miss a face?</em> opens by itself: let a volunteer cover their face, turn and step back. <kbd>E</kbd> closes it. <kbd>SPACE</kbd>: start a round. <kbd>M</kbd>: easy / hard.</span></td></tr>
+    <tr><td>6</td><td><span data-l="nl">Raak het getal!</span><span data-l="en">Hit the number!</span></td><td><span data-l="nl"><kbd>SPACE</kbd>: meet het maximum. <kbd>↑</kbd> <kbd>↓</kbd>: doel. <kbd>SPACE</kbd>: aftellen. <kbd>SPACE</kbd>: volgende ronde.</span><span data-l="en"><kbd>SPACE</kbd>: measure the maximum. <kbd>↑</kbd> <kbd>↓</kbd>: target. <kbd>SPACE</kbd>: countdown. <kbd>SPACE</kbd>: next round.</span></td></tr>
+    <tr><td>7</td><td><span data-l="nl">De bril (simulatie)</span><span data-l="en">The glasses (simulation)</span></td><td><span data-l="nl"><kbd>E</kbd>: hoe de bril gemaakt wordt, en waarom onderzoekers dit doen.</span><span data-l="en"><kbd>E</kbd>: how the glasses are made, and why researchers do this.</span></td></tr>
+    <tr><td>8</td><td><span data-l="nl">Verkeersbord (illustratie)</span><span data-l="en">Traffic sign (illustration)</span></td><td><span data-l="nl">Hetzelfde idee in een ander voorbeeld.</span><span data-l="en">The same idea in another example.</span></td></tr>
+    <tr><td>9</td><td><span data-l="nl">Afsluiting</span><span data-l="en">Closing</span></td><td><span data-l="nl">De QR-code naar deze website (<kbd>K</kbd>: aan / uit).</span><span data-l="en">The QR code to this website (<kbd>K</kbd>: on / off).</span></td></tr>
+  </table>
   </div>
 
   <h2 id="toetsen">🎮 <span data-l="nl">Tijdens de show</span><span data-l="en">During the show</span></h2>
