@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="nl" data-ui="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tips voor docenten</title>
+<meta name="description" content="Tips voor wie de show 'Kun jij de AI foppen?' geeft: voorbereiding, toetsen per stap, voorbeeldverloop en ervaringen.">
+<style>
+  :root {
+    --bg: #f7f6f2; --card: #ffffff; --text: #1d1f24; --muted: #5b6070; --line: #e3e1da;
+    --accent: #c8102e; --accent-soft: #fbe9ec; --code: #f0eee8; --link: #0b5cad;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171c; --card: #1e2128; --text: #e9eaee; --muted: #a3a8b6; --line: #2e323b;
+      --accent: #ff5a6e; --accent-soft: #3a1f25; --code: #262a32; --link: #7cb7ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--link); }
+  header { border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; z-index: 2; }
+  .bar { max-width: 900px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 12px; align-items: center; }
+  .bar strong { flex: 1; }
+  .bar nav { display: flex; gap: 14px; font-size: 15px; }
+  .bar nav a { text-decoration: none; }
+  #lang { border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 999px;
+          padding: 6px 14px; font: inherit; font-size: 15px; cursor: pointer; white-space: nowrap; }
+  main { max-width: 900px; margin: 0 auto; padding: 0 16px 60px; }
+  h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.15; margin: 40px 0 10px; }
+  h2 { margin: 48px 0 12px; font-size: 26px; }
+  h3 { margin: 26px 0 8px; font-size: 20px; }
+  .grid h3, .card h3 { margin-top: 0; }
+  .lead { font-size: 19px; color: var(--muted); max-width: 46em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 14px 0; }
+  .tip { border-left: 4px solid var(--accent); }
+  .tip .num { font-weight: 700; color: var(--accent); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+  .best { border: 2px solid var(--accent); background: var(--accent-soft); }
+  .note { border-left: 4px solid var(--link); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .grid .card { margin: 0; }
+  .muted { color: var(--muted); font-size: 15px; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .92em; background: var(--code); padding: 1px 5px; border-radius: 5px; }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+  kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px;
+        background: var(--card); font-family: inherit; font-size: .9em; white-space: nowrap; }
+  ul.keys { list-style: none; padding: 0; margin: 0; }
+  ul.keys li { margin: 6px 0; }
+  ol li, ul li { margin: 4px 0; }
+  .check li::marker { content: "☐  "; }
+  footer { color: var(--muted); font-size: 15px; border-top: 1px solid var(--line); padding-top: 18px; margin-top: 50px; }
+  html[data-ui="nl"] [data-l="en"], html[data-ui="en"] [data-l="nl"] { display: none !important; }
+  @media (max-width: 600px) { .bar nav { display: none; } body { font-size: 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <strong>🕶️ <a href="index.html" style="color:inherit;text-decoration:none"><span data-l="nl">Kun jij de AI foppen?</span><span data-l="en">Can you fool the AI?</span></a></strong>
+    <nav>
+      <a href="#voorbereiding"><span data-l="nl">Voorbereiding</span><span data-l="en">Preparation</span></a>
+      <a href="#tips"><span data-l="nl">Tips</span><span data-l="en">Tips</span></a>
+      <a href="#toetsen"><span data-l="nl">Toetsen</span><span data-l="en">Keys</span></a>
+      <a href="#verloop"><span data-l="nl">Verloop</span><span data-l="en">Flow</span></a>
+    </nav>
+    <button id="lang" type="button" aria-label="Switch language / Wissel van taal">🇬🇧 English</button>
+  </div>
+</header>
+
+<main>
+  <p><a href="index.html#docent"><span data-l="nl">← Terug naar de hoofdpagina</span><span data-l="en">← Back to the main page</span></a></p>
+  <h1><span data-l="nl">Tips voor docenten</span><span data-l="en">Tips for instructors</span></h1>
+  <p class="lead" data-l="nl">Praktische tips voor wie de show of de groepsles geeft: wat je meeneemt, hoe je de groep meekrijgt, welke toetsen je per stap gebruikt, en een voorbeeldverloop. De tips komen uit de demo's die ik tot nu toe gaf.</p>
+  <p class="lead" data-l="en">Practical tips for the person who gives the show or the group lesson: what to bring, how to get the group involved, which keys to use in each step, and an example flow. The tips come from the demos I gave so far.</p>
+
+  <!-- ============ PREPARATION ============ -->
+  <h2 id="voorbereiding">🧰 <span data-l="nl">Voorbereiding: wat heb je nodig?</span><span data-l="en">Preparation: what do you need?</span></h2>
+  <p data-l="nl">Dit is naast de computer en de installatie (zie <a href="index.html#nodig">de hoofdpagina</a>).</p>
+  <p data-l="en">This is in addition to the computer and the installation (see <a href="index.html#nodig">the main page</a>).</p>
+  <div class="grid">
+    <div class="card">
+      <h3>🖥️ <span data-l="nl">Scherm en camera</span><span data-l="en">Screen and camera</span></h3>
+      <ul class="check" data-l="nl">
+        <li><strong>Groot scherm op ooghoogte.</strong> Mensen moeten zichzelf goed zien.</li>
+        <li><strong>Externe USB-webcam met een lange kabel</strong>, die je boven op het scherm zet.</li>
+        <li><strong>HDMI-kabel</strong> van je laptop naar het scherm.</li>
+      </ul>
+      <ul class="check" data-l="en">
+        <li><strong>A big screen at eye height.</strong> People must see themselves well.</li>
+        <li><strong>An external USB webcam with a long cable</strong>, which you put on top of the screen.</li>
+        <li><strong>An HDMI cable</strong> from your laptop to the screen.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🪑 <span data-l="nl">Meubels en ruimte</span><span data-l="en">Furniture and space</span></h3>
+      <ul class="check" data-l="nl">
+        <li><strong>Lege ruimte voor het scherm</strong>, groot genoeg voor het publiek.</li>
+        <li><strong>Een hoge tafel (statafel) naast het scherm</strong> voor je laptop. Zo bedien je het paneel en sta je dicht bij het scherm en het publiek.</li>
+        <li><strong>Een kleinere tafel voor het scherm</strong> met de grappige spullen: maskers, brillen, petten, sjaals, voorwerpen voor de spellen.</li>
+      </ul>
+      <ul class="check" data-l="en">
+        <li><strong>Empty space in front of the screen</strong>, large enough for the audience.</li>
+        <li><strong>A high table (standing table) next to the screen</strong> for your laptop. Then you control the panel and stand close to the screen and the audience.</li>
+        <li><strong>A smaller table in front of the screen</strong> with the funny items: masks, glasses, caps, scarves, objects for the games.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🔌 <span data-l="nl">Stroom</span><span data-l="en">Power</span></h3>
+      <ul class="check" data-l="nl">
+        <li><strong>Genoeg stopcontacten</strong> voor de laptop en het scherm.</li>
+        <li><strong>Een verlengsnoer</strong> (met stekkerdoos). Neem er zelf een mee: je weet niet hoe ver het stopcontact is.</li>
+      </ul>
+      <ul class="check" data-l="en">
+        <li><strong>Enough power sockets</strong> for the laptop and the screen.</li>
+        <li><strong>An extension cord</strong> (with a power strip). Bring your own: you do not know how far away the socket is.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="card note" data-l="nl"><strong>Op de dag zelf:</strong> start de show vóór het publiek komt. Controleer het camerabeeld (<kbd>C</kbd>), het licht (op de gezichten, niet erachter) en de taal (<kbd>L</kbd>). Oefen alleen met <kbd>Y</kbd> (gesimuleerde groep).</p>
+  <p class="card note" data-l="en"><strong>On the day:</strong> start the show before the audience arrives. Check the camera image (<kbd>C</kbd>), the light (on the faces, not behind them) and the language (<kbd>L</kbd>). Practice alone with <kbd>Y</kbd> (simulated group).</p>
+
+  <!-- ============ TIPS ============ -->
+  <h2 id="tips">💡 <span data-l="nl">Vier gouden tips</span><span data-l="en">Four golden tips</span></h2>
+
+  <div class="card tip">
+    <div class="num"><span data-l="nl">Tip 1</span><span data-l="en">Tip 1</span></div>
+    <h3><span data-l="nl">Haal mensen dicht bij de camera</span><span data-l="en">Get people close to the camera</span></h3>
+    <p data-l="nl">De AI moet de gezichten goed zien. Van ver weg zijn gezichten te klein, en dan werkt de demo niet. Dit is vooral belangrijk bij een grote groep (20+). Zorg dat iedereen staat, en dat minstens een handvol mensen <strong>dicht voor de webcam</strong> staat. <strong>Start de demo pas als dat zo is.</strong></p>
+    <p data-l="en">The AI must see the faces well. From far away, faces are too small, and then the demo does not work. This is most important with a big group (20+). Make sure everyone stands, and that at least a handful of people stand <strong>close in front of the webcam</strong>. <strong>Do not start the demo before this is so.</strong></p>
+  </div>
+
+  <div class="card tip">
+    <div class="num"><span data-l="nl">Tip 2</span><span data-l="en">Tip 2</span></div>
+    <h3><span data-l="nl">Maak ze eerst enthousiast</span><span data-l="en">Make them enthusiastic first</span></h3>
+    <p data-l="nl">Begin niet direct met de uitleg. Praat eerst met de groep: stel vragen en laat ze zich iets afvragen. Bijvoorbeeld: <em>"Wie denkt dat de computer jou nu ziet?"</em>, <em>"Kun je een computer voor de gek houden?"</em> Zo is vanaf het begin duidelijk: dit wordt interactief, je doet mee, het is geen luisterles.</p>
+    <p data-l="en">Do not start with the explanation at once. First talk with the group: ask questions and make them wonder. For example: <em>"Who thinks the computer sees you now?"</em>, <em>"Can you fool a computer?"</em> Then it is clear from the start: this is interactive, you take part, it is not a listen-only lesson.</p>
+  </div>
+
+  <div class="card tip">
+    <div class="num"><span data-l="nl">Tip 3</span><span data-l="en">Tip 3</span></div>
+    <h3><span data-l="nl">Werk met een assistent</span><span data-l="en">Work with an assistant</span></h3>
+    <p data-l="nl">De meeste uitleg heeft een gezicht voor de camera nodig. Soms is de groep te verlegen, of wil of kan niemand meedoen. Kom daarom met z'n tweeën. Dan kan je assistent voor de camera gaan staan en het voorbeeld zijn. Vaak doen anderen daarna wel mee.</p>
+    <p data-l="en">Most explanations need a face in front of the camera. Sometimes the group is too shy, or nobody wants to or can take part. So come with two people. Then your assistant can stand in front of the camera and be the example. Often, others join after that.</p>
+  </div>
+
+  <div class="card tip">
+    <div class="num"><span data-l="nl">Tip 4</span><span data-l="en">Tip 4</span></div>
+    <h3><span data-l="nl">Leer het bedieningspaneel kennen</span><span data-l="en">Learn the operator panel</span></h3>
+    <p data-l="nl">Bekijk het bedieningspaneel vóór de demo. Met de toetsen ga je snel van de ene stap naar de andere (<kbd>H</kbd> toont ze allemaal in het paneel). Ook de uitleg loopt niet vanzelf: jij gaat met <kbd>Page Down</kbd> naar de volgende tekststap. Zo bepaal je zelf het tempo. Zie <a href="#toetsen">de toetsen per stap</a>.</p>
+    <p data-l="en">Look at the operator panel before the demo. With the keys you go quickly from one step to the next (<kbd>H</kbd> shows all of them in the panel). The explanations also do not move on by themselves: you go to the next text step with <kbd>Page Down</kbd>. So you set the pace yourself. See <a href="#toetsen">the keys per step</a>.</p>
+  </div>
+
+  <!-- ============ EXPERIENCES ============ -->
+  <h2 id="ervaringen">📝 <span data-l="nl">Ervaringen per demo</span><span data-l="en">Experiences per demo</span></h2>
+  <div class="grid">
+    <div class="card best">
+      <h3>Night of the Nerds</h3>
+      <p class="muted" data-l="nl">Show voor voorbijgangers · een hele dag · kleine groepjes · max. ~10 minuten per groep</p>
+      <p class="muted" data-l="en">Show for passers-by · a full day · small groups · max. ~10 minutes per group</p>
+      <ul data-l="nl">
+        <li>Groepjes leerlingen lopen langs en worden nieuwsgierig.</li>
+        <li>Ik ging direct naar de stap met maskers: de AI foppen. Daarna vroeg ik of ze ook wat achtergrond wilden.</li>
+        <li>Zo ja: de uitlegpagina's (<kbd>E</kbd>) hielpen goed.</li>
+        <li>Geen interesse? Dan konden ze makkelijk doorlopen.</li>
+        <li><strong>Mijn beste setting:</strong> het werkte bijna altijd en het was leuk.</li>
+      </ul>
+      <ul data-l="en">
+        <li>Small groups of students walk by and become curious.</li>
+        <li>I went directly to the step with masks: fool the AI. Then I asked if they also wanted some background.</li>
+        <li>If yes: the explanation pages (<kbd>E</kbd>) helped well.</li>
+        <li>Not interested? Then they could easily walk on.</li>
+        <li><strong>My best setting:</strong> it worked almost every time and it was fun.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Computing Science Day</h3>
+      <p class="muted" data-l="nl">Groepsles · 20 minuten · grote groep (20+ leerlingen)</p>
+      <p class="muted" data-l="en">Group lesson · 20 minutes · big group (20+ students)</p>
+      <ul data-l="nl">
+        <li>De groepsles past het best bij deze setting.</li>
+        <li>Je hebt <strong>genoeg ruimte voor het scherm</strong> nodig.</li>
+        <li>Zorg dat de leerlingen <strong>dicht genoeg bij de camera</strong> komen (tip 1).</li>
+        <li>Maak ze eerst enthousiast (tip 2). Anders doen ze niet mee.</li>
+      </ul>
+      <ul data-l="en">
+        <li>The group lesson fits this setting best.</li>
+        <li>You need <strong>enough space in front of the screen</strong>.</li>
+        <li>Make sure the students come <strong>close enough to the camera</strong> (tip 1).</li>
+        <li>Make them enthusiastic first (tip 2). If not, they do not take part.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ KEYS PER STEP ============ -->
+  <h2 id="toetsen">🎮 <span data-l="nl">Toetsen per stap</span><span data-l="en">Keys per step</span></h2>
+  <p data-l="nl">De toetsen werken in het showvenster én in het bedieningspaneel. Hieronder per stap alleen de toetsen die je daar nodig hebt. De volledige lijst staat op <a href="index.html#toetsen">de hoofdpagina</a> en in het paneel (<kbd>H</kbd>).</p>
+  <p data-l="en">The keys work in the show window and in the operator panel. Below, for each step, only the keys you need there. The full list is on <a href="index.html#toetsen">the main page</a> and in the panel (<kbd>H</kbd>).</p>
+
+  <div class="card">
+    <h3>🔁 <span data-l="nl">Altijd</span><span data-l="en">Always</span></h3>
+    <div class="table-wrap"><table>
+      <tr><td><kbd>→</kbd> <kbd>←</kbd></td><td><span data-l="nl">Volgende / vorige stap (of hoofdstuk in de les).</span><span data-l="en">Next / previous step (or chapter in the lesson).</span></td></tr>
+      <tr><td><kbd>ESC</kbd></td><td><span data-l="nl">Terug naar het begin (show: wachtscherm; les: opening). Met een scorebord in beeld: scorebord sluiten.</span><span data-l="en">Back to the start (show: attract screen; lesson: opening). With a leaderboard on screen: close the leaderboard.</span></td></tr>
+      <tr><td><kbd>E</kbd></td><td><span data-l="nl">Uitlegpagina van deze stap open / volgende / dicht.</span><span data-l="en">Explanation page of this step: open / next / close.</span></td></tr>
+      <tr><td><kbd>Page Down</kbd> <kbd>N</kbd></td><td><span data-l="nl">Uitleg open: volgende tekststap (een clicker stuurt meestal Page Down).</span><span data-l="en">Explanation open: next text step (a clicker usually sends Page Down).</span></td></tr>
+      <tr><td><kbd>Page Up</kbd></td><td><span data-l="nl">Uitleg: één tekststap terug.</span><span data-l="en">Explanation: one text step back.</span></td></tr>
+      <tr><td><kbd>TAB</kbd></td><td><span data-l="nl">Uitleg volgt een ander gezicht.</span><span data-l="en">The explanation follows another face.</span></td></tr>
+      <tr><td><kbd>Shift</kbd>+<kbd>E</kbd></td><td><span data-l="nl">Alle uitleg eenvoudig / uitgebreid.</span><span data-l="en">All explanations simple / detailed.</span></td></tr>
+      <tr><td><kbd>G</kbd></td><td><span data-l="nl">Wissel tussen show en groepsles.</span><span data-l="en">Switch between show and group lesson.</span></td></tr>
+      <tr><td><kbd>L</kbd> <kbd>F</kbd> <kbd>C</kbd></td><td><span data-l="nl">Taal / volledig scherm / volgende camera.</span><span data-l="en">Language / full screen / next camera.</span></td></tr>
+      <tr><td><kbd>O</kbd> <kbd>K</kbd></td><td><span data-l="nl">Overlays aan/uit / QR-code aan/uit.</span><span data-l="en">Overlays on/off / QR code on/off.</span></td></tr>
+      <tr><td><kbd>D</kbd></td><td><span data-l="nl">Debug: waarom iemand geen speler wordt. Zet het daarna weer uit.</span><span data-l="en">Debug: why someone does not become a player. Turn it off again after.</span></td></tr>
+      <tr><td><kbd>H</kbd></td><td><span data-l="nl">Alle toetsen in het paneel.</span><span data-l="en">All keys in the panel.</span></td></tr>
+      <tr><td><kbd>Q</kbd> 2×</td><td><span data-l="nl">Show afsluiten (binnen 3 s).</span><span data-l="en">Close the show (within 3 s).</span></td></tr>
+    </table></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>👋 <span data-l="nl">Wachtscherm (show)</span><span data-l="en">Attract screen (show)</span></h3>
+      <ul class="keys" data-l="nl">
+        <li><kbd>SPACE</kbd> start de sessie → stap 1.</li>
+        <li><kbd>Y</kbd> testmodus: gesimuleerde groep om alleen te oefenen.</li>
+        <li class="muted">30 s niemand in beeld → de show gaat vanzelf terug naar dit scherm.</li>
+      </ul>
+      <ul class="keys" data-l="en">
+        <li><kbd>SPACE</kbd> starts the session → step 1.</li>
+        <li><kbd>Y</kbd> test mode: simulated group to practice alone.</li>
+        <li class="muted">Nobody in view for 30 s → the show goes back to this screen by itself.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>1 · <span data-l="nl">Pixels</span><span data-l="en">Pixels</span></h3>
+      <ul class="keys" data-l="nl">
+        <li><kbd>SPACE</kbd> maak de foto.</li>
+        <li><kbd>BACKSPACE</kbd> foto weg, weer live beeld.</li>
+        <li><kbd>E</kbd> (na de foto) hoe een filter randen vindt.</li>
+      </ul>
+      <ul class="keys" data-l="en">
+        <li><kbd>SPACE</kbd> take the photo.</li>
+        <li><kbd>BACKSPACE</kbd> drop the photo, live video again.</li>
+        <li><kbd>E</kbd> (after the photo) how a filter finds edges.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>2 · <span data-l="nl">Hoe zeker is de computer?</span><span data-l="en">How sure is the computer?</span></h3>
+      <ul class="keys" data-l="nl">
+        <li><kbd>1</kbd> Bedrieg · <kbd>2</kbd> Raad · <kbd>3</kbd> Speurtocht · <kbd>4</kbd> Verwarring · <kbd>0</kbd> vrij kijken.</li>
+        <li><kbd>I</kbd> uitlegkaart van het spel.</li>
+        <li><kbd>SPACE</kbd> start een ronde; tijdens de ronde: nu stoppen. Bij <em>Raad</em>: bevriezen, onthullen, volgende.</li>
+        <li><kbd>X</kbd> 10 s extra tijd.</li>
+        <li><kbd>T</kbd> volgend doel (Bedrieg) of voorwerp (Verwarring); <kbd>Shift</kbd>+<kbd>T</kbd> terug.</li>
+        <li><kbd>N</kbd> na een ronde: teamnaam typen, <kbd>ENTER</kbd> bewaart.</li>
+        <li><kbd>E</kbd> oude AI → moderne AI → van aanwijzingen naar een kader → dicht.</li>
+      </ul>
+      <ul class="keys" data-l="en">
+        <li><kbd>1</kbd> Fool · <kbd>2</kbd> Guess · <kbd>3</kbd> Hunt · <kbd>4</kbd> Confuse · <kbd>0</kbd> free detection.</li>
+        <li><kbd>I</kbd> how-to-play card.</li>
+        <li><kbd>SPACE</kbd> start a round; during the round: stop now. In <em>Guess</em>: freeze, reveal, next.</li>
+        <li><kbd>X</kbd> 10 s more time.</li>
+        <li><kbd>T</kbd> next target (Fool) or object (Confuse); <kbd>Shift</kbd>+<kbd>T</kbd> back.</li>
+        <li><kbd>N</kbd> after a round: type the team name, <kbd>ENTER</kbd> saves.</li>
+        <li><kbd>E</kbd> old AI → modern AI → from clues to a box → close.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>3 · <span data-l="nl">Verstop je voor de AI!</span><span data-l="en">Hide from the AI!</span></h3>
+      <ul class="keys" data-l="nl">
+        <li><kbd>SPACE</kbd> start een ronde; tijdens de ronde: nu stoppen.</li>
+        <li><kbd>X</kbd> 10 s extra tijd.</li>
+        <li><kbd>M</kbd> makkelijk (oude AI) / moeilijk (moderne AI).</li>
+        <li><kbd>V</kbd> scores op gezichten aan / uit.</li>
+        <li><kbd>I</kbd> uitlegkaart van het spel.</li>
+        <li><kbd>E</kbd> waarom de AI een gezicht kan missen.</li>
+        <li><kbd>P</kbd> werkt het niet in deze ruimte? Spring naar stap 4.</li>
+      </ul>
+      <ul class="keys" data-l="en">
+        <li><kbd>SPACE</kbd> start a round; during the round: stop now.</li>
+        <li><kbd>X</kbd> 10 s more time.</li>
+        <li><kbd>M</kbd> easy (old AI) / hard (modern AI).</li>
+        <li><kbd>V</kbd> scores on faces on / off.</li>
+        <li><kbd>I</kbd> how-to-play card.</li>
+        <li><kbd>E</kbd> why the AI can miss a face.</li>
+        <li><kbd>P</kbd> does it not work in this room? Jump to step 4.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>4 · <span data-l="nl">De bril (simulatie)</span><span data-l="en">The glasses (simulation)</span></h3>
+      <ul class="keys" data-l="nl">
+        <li><kbd>E</kbd> hoe de bril gemaakt wordt, en waarom onderzoekers dit doen.</li>
+        <li><kbd>→</kbd> show: terug naar het wachtscherm; les: naar het verkeersbord.</li>
+      </ul>
+      <ul class="keys" data-l="en">
+        <li><kbd>E</kbd> how the glasses are made, and why researchers do this.</li>
+        <li><kbd>→</kbd> show: back to the attract screen; lesson: to the traffic sign.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🎯 <span data-l="nl">Raak het getal! (alleen les)</span><span data-l="en">Hit the number! (lesson only)</span></h3>
+      <ul class="keys" data-l="nl">
+        <li><kbd>SPACE</kbd> meet het maximum (iedereen in beeld).</li>
+        <li><kbd>↑</kbd> <kbd>↓</kbd> doel hoger / lager.</li>
+        <li><kbd>SPACE</kbd> aftellen, dan telt de AI.</li>
+        <li><kbd>SPACE</kbd> volgende ronde.</li>
+        <li><kbd>BACKSPACE</kbd> maximum opnieuw meten.</li>
+      </ul>
+      <ul class="keys" data-l="en">
+        <li><kbd>SPACE</kbd> measure the maximum (everyone in view).</li>
+        <li><kbd>↑</kbd> <kbd>↓</kbd> target higher / lower.</li>
+        <li><kbd>SPACE</kbd> countdown, then the AI counts.</li>
+        <li><kbd>SPACE</kbd> next round.</li>
+        <li><kbd>BACKSPACE</kbd> measure the maximum again.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ EXAMPLE FLOWS ============ -->
+  <h2 id="verloop">🗺️ <span data-l="nl">Voorbeeldverloop</span><span data-l="en">Example flow</span></h2>
+  <p class="muted" data-l="nl">De tijden zijn een richtlijn. Pas ze aan je groep aan.</p>
+  <p class="muted" data-l="en">The times are a guideline. Adapt them to your group.</p>
+
+  <h3>🚶 <span data-l="nl">Show voor voorbijgangers (max. ~10 min per groepje)</span><span data-l="en">Show for passers-by (max. ~10 min per group)</span></h3>
+  <p data-l="nl">Start met <code>python -m show</code>. Zoals op Night of the Nerds: eerst de actie, de uitleg alleen als ze willen.</p>
+  <p data-l="en">Start with <code>python -m show</code>. As at Night of the Nerds: action first, the explanation only if they want it.</p>
+  <div class="table-wrap"><table>
+    <tr><th><span data-l="nl">Tijd</span><span data-l="en">Time</span></th><th><span data-l="nl">Stap</span><span data-l="en">Step</span></th><th><span data-l="nl">Toetsen</span><span data-l="en">Keys</span></th><th><span data-l="nl">Wat doe / zeg je?</span><span data-l="en">What do you do / say?</span></th></tr>
+    <tr><td>0–1 min</td><td><span data-l="nl">Wachtscherm</span><span data-l="en">Attract screen</span></td><td>—</td><td><span data-l="nl">Mensen zien een gekleurd kader om zichzelf. Spreek ze aan: <em>"Zie je dat de computer jou ziet? Kun je hem foppen?"</em> Laat ze dichterbij komen.</span><span data-l="en">People see a colored box around themselves. Talk to them: <em>"Do you see that the computer sees you? Can you fool it?"</em> Let them come closer.</span></td></tr>
+    <tr><td>1–5 min</td><td><span data-l="nl">Stap 3: Verstop je voor de AI!</span><span data-l="en">Step 3: Hide from the AI!</span></td><td><kbd>SPACE</kbd> <kbd>→</kbd> <kbd>→</kbd>, <span data-l="nl">dan</span><span data-l="en">then</span> <kbd>SPACE</kbd></td><td><span data-l="nl">Direct naar de actie. Geef maskers, brillen en petten van de tafel. Start een ronde. Lukt het niet? <kbd>M</kbd> voor de makkelijke (oude) AI.</span><span data-l="en">Go directly to the action. Hand out masks, glasses and caps from the table. Start a round. Does it not work? <kbd>M</kbd> for the easy (old) AI.</span></td></tr>
+    <tr><td>5 min</td><td>—</td><td>—</td><td><span data-l="nl">Vraag: <em>"Willen jullie weten waarom dit werkt?"</em> Nee: bedank ze, <kbd>ESC</kbd>. Ja: ga verder.</span><span data-l="en">Ask: <em>"Do you want to know why this works?"</em> No: thank them, <kbd>ESC</kbd>. Yes: go on.</span></td></tr>
+    <tr><td>5–7 min</td><td><span data-l="nl">Stap 3: uitleg</span><span data-l="en">Step 3: explanation</span></td><td><kbd>E</kbd>, <kbd>Page Down</kbd></td><td><span data-l="nl">Waarom de AI een gezicht kan missen, live op hun eigen gezicht.</span><span data-l="en">Why the AI can miss a face, live on their own face.</span></td></tr>
+    <tr><td>7–9 min</td><td><span data-l="nl">Stap 4: de bril</span><span data-l="en">Step 4: the glasses</span></td><td><kbd>→</kbd>, <kbd>E</kbd>, <kbd>Page Down</kbd></td><td><span data-l="nl">Zo doen onderzoekers het. Zeg erbij: dit is een simulatie.</span><span data-l="en">How researchers do it. Say it: this is a simulation.</span></td></tr>
+    <tr><td><span data-l="nl">extra</span><span data-l="en">extra</span></td><td><span data-l="nl">Stap 1 of 2</span><span data-l="en">Step 1 or 2</span></td><td><kbd>←</kbd>, <kbd>1</kbd>–<kbd>4</kbd></td><td><span data-l="nl">Nog tijd en zin? Een spel in stap 2, of pixels in stap 1.</span><span data-l="en">More time and interest? A game in step 2, or pixels in step 1.</span></td></tr>
+    <tr><td><span data-l="nl">einde</span><span data-l="en">end</span></td><td><span data-l="nl">Wachtscherm</span><span data-l="en">Attract screen</span></td><td><kbd>ESC</kbd></td><td><span data-l="nl">Klaar voor het volgende groepje.</span><span data-l="en">Ready for the next group.</span></td></tr>
+  </table></div>
+
+  <h3>🎓 <span data-l="nl">Groepsles (20 min, 20+ leerlingen)</span><span data-l="en">Group lesson (20 min, 20+ students)</span></h3>
+  <p data-l="nl">Start met <code>python -m show --lesson</code>, of druk op <kbd>G</kbd>. Zoals op de Computing Science Day.</p>
+  <p data-l="en">Start with <code>python -m show --lesson</code>, or press <kbd>G</kbd>. As at the Computing Science Day.</p>
+  <div class="table-wrap"><table>
+    <tr><th><span data-l="nl">Tijd</span><span data-l="en">Time</span></th><th><span data-l="nl">Hoofdstuk</span><span data-l="en">Chapter</span></th><th><span data-l="nl">Toetsen</span><span data-l="en">Keys</span></th><th><span data-l="nl">Wat doe / zeg je?</span><span data-l="en">What do you do / say?</span></th></tr>
+    <tr><td>0–3 min</td><td><span data-l="nl">1 · Opening</span><span data-l="en">1 · Opening</span></td><td>—</td><td><span data-l="nl">Iedereen staat op en komt naar voren. Een handvol vrijwilligers dicht bij de camera. Stel vragen: <em>"Hoeveel mensen ziet de computer? Klopt dat?"</em> Ga pas verder als de groep meedoet.</span><span data-l="en">Everyone stands up and comes to the front. A handful of volunteers close to the camera. Ask questions: <em>"How many people does the computer see? Is that right?"</em> Only go on when the group takes part.</span></td></tr>
+    <tr><td>3–5 min</td><td><span data-l="nl">2 · Pixels</span><span data-l="en">2 · Pixels</span></td><td><kbd>→</kbd> <kbd>SPACE</kbd> <kbd>E</kbd> <kbd>Page Down</kbd></td><td><span data-l="nl">Foto van een vrijwilliger: een foto is alleen getallen. Filter: laat de groep zwaaien.</span><span data-l="en">Photo of a volunteer: a photo is only numbers. Filter: let the group wave.</span></td></tr>
+    <tr><td>5–8 min</td><td><span data-l="nl">3 · Hoe herkent de AI dingen?</span><span data-l="en">3 · How does the AI recognize things?</span></td><td><kbd>→</kbd> <kbd>Page Down</kbd> <kbd>E</kbd></td><td><span data-l="nl">Oude AI → moderne AI → van aanwijzingen naar een kader. Jij bepaalt het tempo.</span><span data-l="en">Old AI → modern AI → from clues to a box. You set the pace.</span></td></tr>
+    <tr><td>8–10 min</td><td><span data-l="nl">4 · Hoe zeker is de computer?</span><span data-l="en">4 · How sure is the computer?</span></td><td><kbd>→</kbd> <kbd>2</kbd> <kbd>SPACE</kbd></td><td><span data-l="nl">Eén spel is genoeg. <em>Raad</em> (<kbd>2</kbd>) werkt met de hele groep.</span><span data-l="en">One game is enough. <em>Guess</em> (<kbd>2</kbd>) works with the whole group.</span></td></tr>
+    <tr><td>10–13 min</td><td><span data-l="nl">5 · Verstop je voor de AI!</span><span data-l="en">5 · Hide from the AI!</span></td><td><kbd>→</kbd> <kbd>Page Down</kbd> <kbd>E</kbd> <kbd>SPACE</kbd></td><td><span data-l="nl">Uitleg met je assistent of een vrijwilliger: gezicht bedekken, draaien, naar achteren. Dan een ronde met de spullen van de tafel.</span><span data-l="en">Explanation with your assistant or a volunteer: cover the face, turn, step back. Then a round with the items from the table.</span></td></tr>
+    <tr><td>13–16 min</td><td><span data-l="nl">6 · Raak het getal!</span><span data-l="en">6 · Hit the number!</span></td><td><kbd>→</kbd> <kbd>SPACE</kbd> <kbd>↑</kbd><kbd>↓</kbd> <kbd>SPACE</kbd></td><td><span data-l="nl">Iedereen in beeld. De groep beslist wie zich verstopt. Twee of drie rondes.</span><span data-l="en">Everyone in view. The group decides who hides. Two or three rounds.</span></td></tr>
+    <tr><td>16–19 min</td><td><span data-l="nl">7–8 · Bril en verkeersbord</span><span data-l="en">7–8 · Glasses and traffic sign</span></td><td><kbd>→</kbd> <kbd>E</kbd> <kbd>Page Down</kbd> <kbd>→</kbd></td><td><span data-l="nl">Zo doen onderzoekers het, en waarom. Bril = simulatie, bord = illustratie.</span><span data-l="en">How researchers do it, and why. Glasses = simulation, sign = illustration.</span></td></tr>
+    <tr><td>19–20 min</td><td><span data-l="nl">9 · Afsluiting</span><span data-l="en">9 · Closing</span></td><td><kbd>→</kbd></td><td><span data-l="nl">Bedank de groep. De QR-code leidt naar deze website.</span><span data-l="en">Thank the group. The QR code goes to this website.</span></td></tr>
+  </table></div>
+  <p class="card note" data-l="nl"><strong>Krap in de tijd?</strong> Sla in hoofdstuk 4 het spel over, of doe één ronde <em>Raak het getal!</em>. Stap nooit over tip 1: zonder gezichten dicht bij de camera werkt niets.</p>
+  <p class="card note" data-l="en"><strong>Short on time?</strong> Skip the game in chapter 4, or do one round of <em>Hit the number!</em>. Never skip tip 1: without faces close to the camera, nothing works.</p>
+
+  <footer>
+    <p data-l="nl"><a href="index.html">← Hoofdpagina</a> · Vragen? Mail naar <a href="mailto:tom.janssen-groesbeek@ru.nl">tom.janssen-groesbeek@ru.nl</a>.</p>
+    <p data-l="en"><a href="index.html">← Main page</a> · Questions? Send an email to <a href="mailto:tom.janssen-groesbeek@ru.nl">tom.janssen-groesbeek@ru.nl</a>.</p>
+  </footer>
+</main>
+
+<script>
+  // Language: ?lang=en in the link wins, then the last choice of this browser, else Dutch.
+  (function () {
+    var root = document.documentElement, btn = document.getElementById("lang");
+    var titles = { nl: "Tips voor docenten", en: "Tips for instructors" };
+    function store(v) { try { localStorage.setItem("lang", v); } catch (e) {} }
+    function stored() { try { return localStorage.getItem("lang"); } catch (e) { return null; } }
+    function set(l, remember) {
+      root.setAttribute("data-ui", l);
+      root.setAttribute("lang", l);
+      document.title = titles[l];
+      btn.textContent = l === "nl" ? "🇬🇧 English" : "🇳🇱 Nederlands";
+      if (remember) {
+        store(l);
+        var url = new URL(location.href);
+        url.searchParams.set("lang", l);
+        history.replaceState(null, "", url);
+      }
+    }
+    var q = new URLSearchParams(location.search).get("lang");
+    set(q === "en" || q === "nl" ? q : (stored() === "en" ? "en" : "nl"), false);
+    btn.addEventListener("click", function () {
+      set(root.getAttribute("data-ui") === "nl" ? "en" : "nl", true);
+    });
+  })();
+</script>
+</body>
+</html>
