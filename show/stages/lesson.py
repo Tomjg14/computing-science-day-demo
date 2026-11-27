@@ -102,8 +102,8 @@ class SignStage(Stage):
             k = r.u(100) / 100   # r.u() keeps sizes positive, so offsets scale here
             r.screen.blit(block, block.get_rect(center=(cx + int(dx * k), cy + int(dy * k))))
         r.text(t("illustration_tag"), 22, YELLOW, midtop=(cx, cy + rad + r.u(14)))
-        r.text(config.SOURCE_SIGN, 18, GREY, shadow=False, bold=False,
-               bottomright=(sw - r.u(20), sh - r.u(14)))
+        # under the label, in the middle: the bottom-right corner is where the QR code goes
+        r.text(config.SOURCE_SIGN, 18, GREY, shadow=False, bold=False, midtop=(cx, cy + rad + r.u(46)))
 
 
 def _octagon(surface, color, center, radius):

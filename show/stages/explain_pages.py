@@ -13,7 +13,8 @@ outputs of three layers and the face score of that copy. Simple: one filter per 
 the first one is an edge filter (measured, explain.FirstLayerFilters.edge_filters). In later
 layers the maps get smaller (10 x 10 squares in the last one shown), so each square sees a
 large part of the face; the page picks the filters whose output is highest on the face compared
-with around it (explain.face_contrast), and the simple page lays those maps over the face.
+with around it (explain.face_contrast), averaged over the first CHOOSE_TIME seconds, and the
+simple page lays those maps over the face.
 
 Simple or detailed: config.EXPLAIN_DETAIL (Shift+E). Both pages follow the explanation face
 (facelock.py): it never switches by itself; when it is covered, the pages keep its last place,
@@ -38,6 +39,9 @@ SCAN_EVERY = 0.5       # seconds between two searches of the whole image with th
 SCAN_WIDTH = 320       # the search runs on the camera image made this wide
 QUESTION_TIME = 4.0    # simple old page: seconds per yes/no question
 FACE_SIZE = 240        # simple old page: the gray face window on screen (pixels at 720 high)
+CHOOSE_TIME = 1.5      # new page: seconds of model results that the filter choice averages over
+CHOOSE_MIN = 3         # new page: at least this many results before the choice
+SCALE_FOLLOW = 0.15    # new page: how fast the color scale follows each new result (0-1)
 
 
 class ModelExplainer:
@@ -50,8 +54,12 @@ class ModelExplainer:
         self.window = self.result = None   # old page: (window box, found by Haar), cascade result
         self.grid = None                   # old page: the 24 x 24 gray window
         self.last_haar = 0.0
-        self.channels = {}                 # new page: layer -> chosen channels, fixed per opening
-        self.scale = {}                    # layer -> value that is full color
+        self.channels = {}                 # new page: layer -> all filters, best first, fixed per opening
+        self.edge = None                   # new page, simple: the edge filter shown for layer 1
+        self.scale = {}                    # simple: layer -> (lo, hi) of its filter, follows the results
+        self.dscale = {}                   # detailed: layer -> value that is full color, follows the results
+        self.rank_sum, self.rank_n = {}, 0  # new page: summed face rankings before the choice
+        self.rank_start, self.rank_res = None, None   # time of the first result, last result counted
         self.first = shared_first_layer()  # to find the edge filters of layer 1
         self.face_gray = None              # old page: the gray face window, large
         self.scan, self.last_scan = None, 0.0   # old page: (small gray image, found windows)
@@ -63,7 +71,8 @@ class ModelExplainer:
     def open(self, page, now):
         """page: "old", "new" or None (closed)."""
         self.page = page
-        self.channels, self.scale = {}, {}
+        self.channels, self.scale, self.dscale, self.edge = {}, {}, {}, None
+        self.rank_sum, self.rank_n, self.rank_start, self.rank_res = {}, 0, None, None
         self.layers.result = None
 
     def close(self):
@@ -93,6 +102,46 @@ class ModelExplainer:
             self.result = self.cascade.evaluate(self.grid) if self.grid is not None else None
         elif self.page == "new":
             self.layers.submit(*padded_square(app.frame, self.face_box, margin=0.35))
+            res = self.layers.result
+            if res is not None and res is not self.rank_res:   # each model result counts once
+                self.rank_res = res
+                self._choose_filters(res, now)
+                self._follow_scale(res)
+
+    def _choose_filters(self, res, now):
+        """Average the face ranking over the first CHOOSE_TIME seconds of results, then fix the
+        order of the filters. One result is not enough: in one image a filter can win by chance
+        and then react to the shoulders or clothes in the next images."""
+        if self.channels:
+            return
+        if self.rank_start is None:
+            self.rank_start = now
+        for layer, maps in res["maps"].items():
+            rank = self._ranking(maps, res)
+            self.rank_sum[layer] = self.rank_sum.get(layer, 0) + rank
+        self.rank_n += 1
+        if now - self.rank_start < CHOOSE_TIME or self.rank_n < CHOOSE_MIN:
+            return
+        for layer, total in self.rank_sum.items():
+            self.channels[layer] = [int(c) for c in np.argsort(-total)]
+        first = FEATURE_LAYERS[0]
+        if self.first.ready and first in res["maps"]:
+            self.edge = best_edge_filter(self.first, res["maps"][first])
+
+    def _follow_scale(self, res):
+        """The color scale follows the results a little each time, so the face does not go dark
+        when the values change after the choice."""
+        if not self.channels:
+            return
+        for layer, maps in res["maps"].items():
+            m = maps[self.channels[layer][0]]
+            lo = float(m.min())
+            target = (lo, max(lo + 1e-6, float(np.percentile(m, 99))))
+            old = self.scale.get(layer, target)
+            self.scale[layer] = tuple(o + SCALE_FOLLOW * (n - o) for o, n in zip(old, target))
+            top = max(1e-6, float(maps[self.channels[layer][:MAPS_PER_LAYER]].max()))
+            old = self.dscale.get(layer, top)
+            self.dscale[layer] = old + SCALE_FOLLOW * (top - old)
 
     # --- drawing ---
     def draw(self, r, app, now):
@@ -191,7 +240,7 @@ class ModelExplainer:
     def _draw_new_simple(self, r, area, step):
         """The face, one real output per layer (layer 1: an edge filter), and the face score."""
         res = self.layers.result
-        if res is None:
+        if res is None or not self.channels:
             r.text(t("x3n_wait"), 26, YELLOW, center=area.center)
             return
         size = r.u(170)
@@ -205,14 +254,9 @@ class ModelExplainer:
         for j, (layer, maps) in enumerate(layers):
             if j > 0 and step < 1:
                 break
-            if layer not in self.channels:   # chosen once per opening, then kept
-                if j == 0 and self.first.ready:
-                    self.channels[layer] = [best_edge_filter(self.first, maps)]
-                else:   # the filter that points at the face most clearly
-                    self.channels[layer] = [int(np.argmax(self._ranking(maps, res)))]
-                m = maps[self.channels[layer][0]]
-                self.scale[layer] = (float(m.min()), max(float(m.min()) + 1e-6, float(np.percentile(m, 99))))
-            m = maps[self.channels[layer][0]]
+            # layer 1: the edge filter; later layers: the filter that points at the face most clearly
+            ch = self.edge if j == 0 and self.edge is not None else self.channels[layer][0]
+            m = maps[ch]
             rect = pygame.Rect(area.x + j * (tile + gap), y, tile, tile)
             if j == 0:   # the edge filter: edges bright, flat areas dark, like the edge image of step 1
                 blit_image(r, edge_strength_rgb(m), rect)
@@ -329,7 +373,7 @@ class ModelExplainer:
 
     def _draw_new(self, r, area):
         res = self.layers.result
-        if res is None:
+        if res is None or not self.channels:
             r.text(t("x3n_wait"), 26, YELLOW, center=area.center)
             return
         crop = res["crop"]
@@ -346,15 +390,11 @@ class ModelExplainer:
         y = area.y + size + r.u(40)
         tile = r.u(100)
         for layer, maps in res["maps"].items():
-            if layer not in self.channels:   # choose the filters that point at the face, once per opening
-                order = np.argsort(-self._ranking(maps, res))[:MAPS_PER_LAYER]
-                self.channels[layer] = order
-                self.scale[layer] = max(1e-6, float(maps[order].max()))
             r.text(t("x3n_layer", n=layer + 1, c=maps.shape[0], k=MAPS_PER_LAYER, s=maps.shape[1]), 18, WHITE,
                    topleft=(area.x, y))
             y += r.u(26)
-            for j, ch in enumerate(self.channels[layer]):
-                m = np.clip(maps[ch] / self.scale[layer], 0, 1)
+            for j, ch in enumerate(self.channels[layer][:MAPS_PER_LAYER]):
+                m = np.clip(maps[ch] / self.dscale[layer], 0, 1)
                 heat = cv2.applyColorMap((m * 255).astype(np.uint8), cv2.COLORMAP_INFERNO)
                 heat = cv2.cvtColor(cv2.resize(heat, (tile, tile), interpolation=cv2.INTER_NEAREST), cv2.COLOR_BGR2RGB)
                 pos = (area.x + j * (tile + r.u(12)), y)
